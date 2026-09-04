@@ -1,0 +1,43 @@
+{
+  "schema": "X_PROVIDER_POLICY_V0.1",
+  "freshness": {
+    "fresh_max_seconds": 60,
+    "acceptable_max_seconds": 180,
+    "warning_max_seconds": 300,
+    "allow_warning_for_decision": false
+  },
+  "routing": {
+    "order": ["PRIMARY", "BACKUP", "CACHE", "FAIL_CLOSED"],
+    "require_source_timestamp_for_live_market_data": true
+  },
+  "planned_providers": [
+    {
+      "role": "PRIMARY_CANDIDATE",
+      "provider": "AKShare/EastMoney",
+      "dataset": "full_market_snapshot",
+      "endpoint": "stock_zh_a_spot_em",
+      "qualification_status": "UNVERIFIED"
+    },
+    {
+      "role": "PRIMARY_CANDIDATE",
+      "provider": "AKShare/EastMoney",
+      "dataset": "minute_bars",
+      "endpoint": "stock_zh_a_hist_min_em",
+      "qualification_status": "UNVERIFIED"
+    },
+    {
+      "role": "BACKUP_CANDIDATE",
+      "provider": "AKShare/Sina",
+      "dataset": "minute_bars",
+      "endpoint": "stock_zh_a_minute",
+      "qualification_status": "UNVERIFIED"
+    },
+    {
+      "role": "CROSS_CHECK_CANDIDATE",
+      "provider": "Longbridge",
+      "dataset": "top_candidate_realtime_validation",
+      "endpoint": "quote/candlestick/intraday",
+      "qualification_status": "NOT_CONNECTED_TO_X_RUNTIME"
+    }
+  ]
+}

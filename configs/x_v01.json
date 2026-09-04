@@ -1,0 +1,32 @@
+{
+  "project": "X",
+  "version": "0.1.0",
+  "decision": {
+    "timezone": "Asia/Shanghai",
+    "research_window": ["14:30", "14:55"],
+    "primary_snapshot": "14:50",
+    "secondary_snapshots": ["14:35", "14:45"],
+    "snapshot_times": ["14:35", "14:45", "14:50"]
+  },
+  "data": {
+    "primary_adapter": "akshare",
+    "cache_schema": "X_AUDITED_CACHE_V0.1",
+    "security_master_schema": "X_SECURITY_MASTER_V0.1",
+    "decision_snapshot_schema": "X_DECISION_SNAPSHOT_V0.1",
+    "minute_timestamp_semantics": "unverified",
+    "minute_volume_unit": "provider_native_unverified"
+  },
+  "next_morning": {
+    "window_start": "09:31",
+    "window_end": "10:00",
+    "point_times": ["09:35", "09:45", "10:00"],
+    "up_thresholds_pct": [0.5, 1.0, 1.5],
+    "down_thresholds_pct": [0.5, 1.0]
+  },
+  "research": {
+    "baseline_model": "lightgbm",
+    "qlib_features": ["Alpha158", "Alpha360"],
+    "allow_cash": true,
+    "rd_agent_enabled": false
+  }
+}

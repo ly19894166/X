@@ -1,0 +1,32 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.venv/
+venv/
+
+# secrets
+.env
+.env.*
+*.key
+*.pem
+
+# local data / models / outputs
+/data/
+/cache/
+models/
+artifacts/
+reports/
+*.parquet
+*.feather
+*.csv
+*.xlsx
+*.pkl
+*.joblib
+
+# IDE / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
