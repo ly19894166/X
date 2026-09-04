@@ -1,0 +1,27 @@
+[build-system]
+requires = ["setuptools>=69", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "x-tail-morning-alpha"
+version = "0.1.0"
+description = "A-share tail-to-next-morning alpha research engine"
+requires-python = ">=3.11,<3.13"
+dependencies = [
+  "numpy>=1.26",
+  "pandas>=2.2",
+]
+
+[project.optional-dependencies]
+research = [
+  "akshare>=1.14",
+  "lightgbm>=4.0",
+  "pyqlib>=0.9",
+]
+dev = [
+  "pytest>=8.0",
+]
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+testpaths = ["tests"]
