@@ -17,7 +17,7 @@ X 是一个完全独立的新项目。
 
 ## 技术路线
 
-- 数据：AKShare 等公开接口 + 本地缓存/审计
+- 数据：独立 AKShare 适配器 + raw/normalized 不可变本地缓存/审计
 - 研究框架：Microsoft Qlib
 - 首个基线：Alpha158/Alpha360 + LightGBM
 - 评估：Walk-Forward + 严格 OOS + Forward Freeze
@@ -32,4 +32,14 @@ X 是一个完全独立的新项目。
 5. 可以输出 CASH，不为了给答案而强行选股。
 6. 历史数据用于学习结构关系，不用于机械匹配“相同走势”。
 
-当前状态：`X V0.1 Foundation`。
+## 当前状态
+
+`Phase 1 Data Layer core`：
+
+- AKShare 交易日历、当前证券代码表、日线与分钟线的独立适配边界
+- 带 SHA-256、抓取时间、来源时间、参数、单位和 schema 的 audited cache
+- effective-time + knowledge-time 的 point-in-time security master 基础结构
+- 14:35 / 14:45 / 14:50 全 Universe Decision Snapshot 硬契约
+- 对 source、feature、security master 三条未来信息通道的 fail-closed 检查
+
+当前实现不声明已完成 AKShare 在线全市场验收，也不把 AKShare 当前代码表伪装成历史证券主数据。详见 [Phase 1 说明](docs/PHASE1_DATA_LAYER.md)。
