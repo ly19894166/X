@@ -4,6 +4,10 @@
 
 ## 执行方式与通用完成定义
 
+**Phase 0 → Phase 11 是开发实施与依赖建设顺序，不是生产运行时的数据处理顺序。** Phase4/5/6先于Phase7开发时使用fixture建设契约与组件；生产仍按总体规范的版本化事件流水线执行：Evidence → Event → Research/Impact → Mapping → Pricing → Candidate。不得因实施编号把生产逻辑写成先生成股票映射、再研究事件；研究后的映射/定价可反馈触发新版本，不倒写已冻结结果。
+
+本次Review修订后仍等待人工复审：Issue #5保持OPEN，Issue #6未开始；复审通过前不关闭Phase0，不启动Phase1。
+
 每次先核对远端分支/已有PR/Issue/CI和本地改动；重用已完成工作，不因上次中断重建。只读本规范及冻结矩阵，无明确技术阻塞不重开全网研究。每Phase一个小PR，必要时在该Issue内拆检查项，不一次性实现整个系统。默认从已审阅的事件分支/合并基线开始，不能把未合并Market PR #2默认为main。
 
 Phase0完成后停止；后续运行须以明确Phase任务为范围。本轮不安装依赖、不开收费调用、不部署服务、不进入自动交易。阶段之间采用功能依赖，不以某个公司证据不全阻塞整个系统；真实来源/行情/API限制只标相关Live能力HOLD，fixture验收与真实验收分开。
@@ -45,12 +49,12 @@ Phase0完成后停止；后续运行须以明确Phase任务为范围。本轮不
 ## Phase 1：Source / Actor / Evidence / Event 核心Schema
 
 - **输入**：已审阅的Phase0规范、冻结Pydantic/pytest复用选择、无网络fixture。
-- **输出**：独立subsystems/event_engine包、最小x-event CLI入口、严格模型/枚举和生成JSON Schema；中文字段说明及错误解释。
-- **数据结构**：公共VersionEnvelope、Source、SourceTopicProfile、Actor、ActorTopicProfile、Statement、EvidenceVersion/Relation、EventVersion、EventDNA；为后续对象保留版本引用。
-- **单元测试**：合法/非法枚举、未知数值、前导零、带时区时间、人物×主题、事实/意图/传闻分离、JSON round-trip、引用形状；只测X契约。
-- **PIT测试**：naive时间拒绝、available_at晚于as_of拒绝、公告effective早而available晚、人物任期后来变更不可提前、LIVE与PUBLIC_PIT模式不可混用。
+- **输出**：独立subsystems/event_engine包、最小x-event CLI入口、严格类型与分层枚举契约及生成JSON Schema；中文字段说明及错误解释。
+- **数据结构**：公共VersionEnvelope、Source、SourceTopicProfile、NarrativeSourceProfile、Actor、ActorTopicProfile、Statement、EvidenceVersion/Relation、EventVersion、EventDNA；为后续对象保留版本引用。NarrativeSourceProfile至少包含source_id、category、topic_id、followers?、originality?、citation_rate?、leading_stats?、following_stats?、posthoc_stats?、edit_stats?、delete_stats?、sample_n、observation_window、available_at、evidence_refs[]，另遵守公共信封与派生时间字段。Source补充terms_status、authorization_status、allowed_uses、raw_retention_allowed、access_restrictions，允许UNKNOWN/null而不推定授权；开源代码许可与数据/API条款分开。
+- **单元测试**：内部决策/状态枚举严格拒绝未声明值；未知外部statement类型可规范化为UNKNOWN/OTHER并安全摄取，保留raw_type，不丢整条Evidence、不升级事实可信度；未知内部fact_state仍必须拒绝。覆盖未知数值、前导零、带时区时间、人物×主题、事实/意图/传闻分离、JSON round-trip、引用形状。测试NarrativeSourceProfile主题作用域、可空指标、sample_n/observation_window及证据引用；粉丝数不等于事实可信度，画像服务Narrative/Diffusion/Lead-Lag。Source授权元数据允许未知但不得默认无限采集/留存/商用；只测X契约。
+- **PIT测试**：naive时间拒绝、available_at晚于as_of拒绝、公告effective早而available晚、人物任期后来变更不可提前、LIVE与PUBLIC_PIT模式不可混用。LIVE_FORWARD原始Evidence必须满足available_at >= max(first_seen_at, collected_at, ready_at, recorded_at)，其中ready_at为解析/规范化/必需校验完成、recorded_at为该版本成功耐久化提交完成；派生对象满足available_at >= max(all_input_available_at, computed_at, recorded_at)。必测同日+08:00时间：10:00:02接收完成、10:00:05校验/持久化完成，10:00:03的as-of不可见；持久化延至10:00:07则10:00:06仍不可见。缺ready_at/recorded_at或校验/提交失败不得形成正式可查询Evidence。NarrativeSourceProfile领先率、后验解释及人物兑现率等按版本/输入结果可用时间查询，未来结果不得回填过去；Phase1用fixture验证契约，真实事务持久化回归在Phase2实现。
 - **验收条件**：可离线生成/校验一份source→evidence→event fixture；Schema冻结且一致；独立安装不依赖xalpha；锁稳定包版本/许可清单并加独立CI。
-- **FAIL_CLOSED / HOLD 条件**：关键时间/身份/引用不合法则隔离记录；Schema不一致阻止持久化；原始业务占比未知可null，不能强行补数字。
+- **FAIL_CLOSED / HOLD 条件**：关键时间/身份/引用不合法或内部决策枚举含未声明值则隔离结果；未ready或未成功耐久化提交不得发布正式Evidence。外部分类缺新枚举成员本身不构成整条Evidence拒收理由：允许UNKNOWN/OTHER+raw_type，仍需通过来源/PIT等校验；未知占比可null，不能补数字。
 - **允许范围**：subsystems/event_engine/{pyproject.toml,src/xevent/contracts,tests,configs}；必要时新增独立CI文件，不改原CI语义。
 
 ## Phase 2：Event Ledger、Origin去重、Novelty与最小采集入口

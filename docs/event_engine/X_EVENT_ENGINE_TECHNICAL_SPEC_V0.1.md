@@ -70,7 +70,14 @@ Collector → Evidence → Event → Research → Mapping → Pricing → Candid
 
 ### 3.1 类型和公共信封
 
-ID 为稳定非空字符串；`version` 为正整数；代码为字符串保留前导零；时间为 RFC3339 带时区，存储统一 UTC，用户显示 Asia/Shanghai。未知数值为 `null` 加 `missing_reason`，不能用 0、空字符串、NaN 或想象值填充。列表为空必须区分“没有”和“未查”。所有规范枚举拒绝未知值，扩展须升 `schema_version`。Pydantic 严格校验与 JSON Schema 生成复用库，不能自写通用校验框架。
+ID 为稳定非空字符串；`version` 为正整数；代码为字符串保留前导零；时间为 RFC3339 带时区，存储统一 UTC，用户显示 Asia/Shanghai。未知数值为 `null` 加 `missing_reason`，不能用 0、空字符串、NaN 或想象值填充。列表为空必须区分“没有”和“未查”。枚举按用途分层，新增正式成员须升 `schema_version`：内部决策/状态枚举严格校验；外部输入分类保留安全兜底，规则如下。Pydantic 严格校验与 JSON Schema 生成复用库，不能自写通用校验框架。
+
+枚举分层契约：
+
+- **内部决策/状态枚举**：`fact_state / narrative_state / pricing_state / mapping_state / grade / impact_direction` 等仅接受各自规范已列成员，未声明值必须 FAIL_CLOSED，不静默纠正或映射成合法状态。部分枚举已声明的 `UNKNOWN` 是明确状态，不等于允许任意未知字符串；例如 `fact_state=NEW_UNLISTED_STATE` 必须拒绝。
+- **外部输入分类枚举**：`statement_type / evidence_type / event_type` 等在已知成员之外必须支持 `UNKNOWN / OTHER`。无法确定分类用 `UNKNOWN`；已知原始类别但暂未纳入分类表用 `OTHER`。原始字段值按原样保存在所属对象的 `raw_type`（来源缺失时为 `null`，并记录原因）；不能只保存兜底成员而丢弃原始值。多个外部分类字段并存时使用按字段名区分的原始分类映射，不能互相覆盖。
+- 外部适配层将未识别值显式规范化，内部模型只接受声明的成员及该类允许的兜底。未知发言场景不得仅因分类表不全而丢弃整条 Evidence；`UNKNOWN/OTHER` 不增加事实可信度、不默认确认主张，也不能绕过来源、引用、PIT和后续验证。原始证据安全摄取与正式推荐资格分开。
+
 
 每个业务版本至少携带：
 
@@ -91,13 +98,31 @@ status, reason_codes[], content_hash
 | `published_at` | 来源声明的发布时间，保留原文及时区精度，可能需核验 |
 | `public_available_at` | 能证明该内容版本向公众开放的时间，及证明方式 |
 | `first_seen_at` | 本系统首次实际观察到这个内容版本的时间 |
-| `collected_at` | 本次原始响应完整接收时间；重抓不改首次观测时间 |
-| `available_at` | 该具体版本在指定运行语义下可进入研究的最早时间 |
+| `collected_at` | 形成该 Evidence 版本的原始响应完整接收时间；后续重抓另记采集记录，不覆盖该版本时间 |
+| `ready_at` | 该原始 Evidence 版本完成解析、规范化与必需校验的时间；不等于事实已确认，也不代替持久化完成时间 |
+| `recorded_at` | 该版本成功耐久化提交完成的时间；不是接收、入队、事务开始或提交请求时间 |
+| `available_at` | 该具体版本满足就绪、耐久化及输入时间门槛后可进入正式研究的最早时间 |
 | `computed_at` | 派生结果/模型输出实际完成时间 |
 | `effective_from/to` | 现实有效区间，左闭右开，与可知时间独立 |
 | `as_of` | 本次研究知识截止时间，任何工具和关联查询共同遵守 |
 
-`LIVE_FORWARD`：原始版本 `available_at >= max(first_seen_at, 首次完整接收时间)`；若来源时间核验发生异常则隔离异常元数据，不以未来发布时间覆盖实际记录。派生结果 `available_at >= max(全部输入 available_at, computed_at, 持久化提交时间)`。14:50 开始、14:52 完成的 LLM 结果不能成为 14:50 的市场模型特征。新发现旧公告只在当前可用。
+`LIVE_FORWARD` 原始 Evidence 统一使用 `ready_at` 表示解析/规范化/必需校验完成时间。正式研究可用时间必须满足：
+
+```text
+available_at >= max(first_seen_at, collected_at, ready_at, recorded_at)
+```
+
+这四个时间是合格 Evidence 版本的必需字段。尚未就绪、校验失败、提交失败或无法证明耐久化完成的内容只能留在原始接收/待处理区，不可作为正式 Evidence 被 as-of 查询选中；不得把记录进入数据库的时间预填为提交完成时间。若来源时间核验发生异常则隔离异常元数据，不以未来发布时间覆盖实际记录。`published_at/public_available_at` 仅表述来源发布与公开可知，不能替代本系统的就绪/提交门槛。新发现旧公告只在当前可用。
+
+派生对象（包括统计画像、模型结果、映射和排名）必须保存 `computed_at`，并满足：
+
+```text
+available_at >= max(all_input_available_at, computed_at, recorded_at)
+```
+
+`all_input_available_at` 为全部具体输入版本可用时间的最大值。14:50 开始、14:52 完成的 LLM 结果不能成为 14:50 的市场模型特征。
+
+PIT边界示例（均为 `2026-09-06`、`+08:00`）：`first_seen_at=10:00:01`、`collected_at=10:00:02`、`ready_at=10:00:05`、`recorded_at=10:00:05`，因此 `available_at` 最早为10:00:05。`as_of=10:00:03` **不得看到该 Evidence**；只有实际发布可用且 `available_at <= as_of` 时才可见。若耐久化延迟到10:00:07，即使校验10:00:05完成，10:00:06仍不可见。每次新内容版本/更正均重新满足门槛，不复用旧版本的就绪或提交时间。
 
 `OBSERVED_REPLAY`：只回放当时保存的具体证据和结果版本，按真实 `available_at <= as_of` 重建。当前新算结果不能冒充历史产出。
 
@@ -120,20 +145,26 @@ status, reason_codes[], content_hash
 
 | 表/对象 | 必需领域字段（另加公共信封） |
 |---|---|
-| `sources` | `source_id, name_zh, platform, canonical_locator, identity_status, tier, roles[], access_method, retention_policy, enabled` |
+| `sources` | `source_id, name_zh, platform, canonical_locator, identity_status, tier, roles[], access_method, retention_policy, enabled, terms_status, authorization_status, allowed_uses, raw_retention_allowed, access_restrictions` |
 | `source_topic_profiles` | `source_id, topic_id, reliability_band, expertise_band, influence_band, diffusion_band, lead_time_stats?, evidence_refs[]` |
 | `actors` | `actor_id, name_zh, entity_type(PERSON/INSTITUTION), organization_id?, role_title_zh?, term_effective_from/to, verified_accounts[]` |
 | `actor_topic_profiles` | `actor_id, topic_id, policy_authority, corporate_authority, expertise_band, influence_band, statement_count, realized_count, partial_count, denied_count, unresolved_count, outcome_available_at?` |
-| `narrative_source_profiles` | `source_id, category, followers?, originality?, citation_rate?, leading/following/posthoc_stats?, edit/delete_stats?, sample_n, observation_window` |
-| `statements` | `actor_id?, source_id, topic_id, statement_type, claim_kind, policy_certainty, market_shock_potential, evidence_ref` |
+| `narrative_source_profiles` / `NarrativeSourceProfile` | `source_id, category, topic_id, followers?, originality?, citation_rate?, leading_stats?, following_stats?, posthoc_stats?, edit_stats?, delete_stats?, sample_n, observation_window, available_at, evidence_refs[]` |
+| `statements` | `actor_id?, source_id, topic_id, statement_type, raw_type?, claim_kind, policy_certainty, market_shock_potential, evidence_ref` |
+
+
+
+`NarrativeSourceProfile` 纳入 Phase 1 核心 Schema。`topic_id` 表示画像统计的主题作用域；`observation_window` 明确起止时间，`sample_n` 为非负有效样本数，未知指标保留 `null`。画像主要服务 Narrative / Diffusion / Lead-Lag，不以粉丝数替代事实可信度。领先/跟随/后验解释、编辑/删除、人物兑现等统计必须按输入证据和结果的可用时间版本化：保存具体输入/证据引用、`computed_at/recorded_at/available_at`，遵守派生对象时间公式；未来才获知的结果不得回填过去画像或过去来源权重。
+
+Source 数据使用元数据仅纳入本Phase契约，不扩建授权系统：`terms_status = UNKNOWN / REVIEWED / UNAVAILABLE`；`authorization_status = UNKNOWN / AUTHORIZED / NOT_REQUIRED / DENIED`；`allowed_uses` 为用途列表（`null`表示未知，空列表表示无已允许用途）；`raw_retention_allowed` 为 `true/false/null`（`null`表示UNKNOWN）；`access_restrictions` 为限制说明列表（`null`表示未知）。未经核实不得从“公开可访问”推断可无限抓取、永久保存或商业使用，UNKNOWN不是授权；明确的限制/拒绝不得忽略。**开源代码许可证与数据/API使用条款分别记录、分别判断**，MIT/Apache等代码许可不授予所访问数据的使用权。这里只记录元数据和未知状态，不在Phase1安装采集依赖或启动采集。
 
 来源层级：`S0` 原始事实文件；`S1` 决策人物/机构发言；`S2` 专业媒体；`S3` 专家/大V；`S4` 广泛社交。用途枚举 `FACT / POLICY_INTENT / EXPLANATION / NARRATIVE / DIFFUSION`，支持多用途。账号认证只能确认身份，不能确认每条主张。人物必须“人物×主题”评价，禁止永久单一人物总分。粉丝数不是事实置信度。
 
-`claim_kind = FACT / INTENT / FORECAST / OPINION / RUMOR / NARRATIVE`；`statement_type = LEGAL_DOCUMENT / POLICY_NOTICE / PRESS_CONFERENCE / SPEECH / HEARING / INTERVIEW / INFORMAL_QA / SOCIAL_ORIGINAL / REPOST / LIKE / ANONYMOUS_REPORT`。政策确定性与市场冲击分开。大V类别为 `INDUSTRY_LEADER / EXPLAINER / ATTENTION_MOVER / FOLLOWER / NOISE`，动态统计不能反向污染历史权重。小样本兑现率显示分子/分母和区间，不称为稳定概率。
+`claim_kind = FACT / INTENT / FORECAST / OPINION / RUMOR / NARRATIVE`；`statement_type = LEGAL_DOCUMENT / POLICY_NOTICE / PRESS_CONFERENCE / SPEECH / HEARING / INTERVIEW / INFORMAL_QA / SOCIAL_ORIGINAL / REPOST / LIKE / ANONYMOUS_REPORT / UNKNOWN / OTHER`。政策确定性与市场冲击分开。大V类别为 `INDUSTRY_LEADER / EXPLAINER / ATTENTION_MOVER / FOLLOWER / NOISE`，动态统计不能反向污染历史权重。小样本兑现率显示分子/分母和区间，不称为稳定概率。
 
 ### 4.2 不可变证据
 
-`EvidenceVersion` 必需：`evidence_id, version, source_id, canonical_url_or_locator, original_language, raw_object_ref, raw_content_hash, first_seen_text_ref, origin_cluster_id, is_first_hand, independence_status, claim_kind, published_at?, public_available_at?, first_seen_at, collected_at, available_at, evidence_type, quality_status`。
+`EvidenceVersion` 必需：`evidence_id, version, source_id, canonical_url_or_locator, original_language, raw_object_ref, raw_content_hash, first_seen_text_ref, origin_cluster_id, is_first_hand, independence_status, claim_kind, published_at?, public_available_at?, first_seen_at, collected_at, ready_at, recorded_at, available_at, evidence_type, raw_type?, quality_status`。
 
 编辑/删除通过 `EvidenceChange(change_type=EDIT/DELETE/RETRACT, observed_at, prior_version_ref)` 追加，`latest_text` 只是视图。`EvidenceRelation(subject_ref, evidence_ref, relation=SUPPORTS/CONTRADICTS/CONTEXT, quoted_span, interpretation_zh)` 保留具体引用段和定位。来源不能抓到全文时保存可用摘要/URL及限制，不能伪造原文。
 
@@ -141,7 +172,7 @@ Reuters 原报道被 20 媒体和 50 账号传播：已确认原始证据数仍�
 
 ## 5. 协议二：Event DNA、Ledger 与发现
 
-`EventVersion` 必需：`event_id, event_version, title_zh, event_type, dna, first_public_at?, first_seen_at, last_material_update_at, fact_state, narrative_state, pricing_state, clock, priority, lifecycle_status, event_cluster_ids[], evidence_refs[], hypothesis_set_ref?, revision_reason`。
+`EventVersion` 必需：`event_id, event_version, title_zh, event_type, raw_type?, dna, first_public_at?, first_seen_at, last_material_update_at, fact_state, narrative_state, pricing_state, clock, priority, lifecycle_status, event_cluster_ids[], evidence_refs[], hypothesis_set_ref?, revision_reason`。
 
 `dna = {actor_ids[], action_code, object_entity_ids[], target_entity_ids[], domain_ids[], geographic_scope[], temporal_scope, identity_rule_version}`。DNA 是查重候选键，不是不可更改的 ID；无法识别主体时使用显式 unresolved 实体，不猜公司代码。
 
