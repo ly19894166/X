@@ -1,0 +1,4513 @@
+{
+  "VersionEnvelope": {
+    "$defs": {
+      "InputVersionRef": {
+        "additionalProperties": false,
+        "properties": {
+          "object_id": {
+            "description": "引用的稳定对象ID；不得使用动态latest",
+            "minLength": 1,
+            "pattern": "\\S",
+            "title": "Object Id",
+            "type": "string"
+          },
+          "version": {
+            "description": "引用的具体正整数版本",
+            "exclusiveMinimum": 0,
+            "title": "Version",
+            "type": "integer"
+          },
+          "available_at": {
+            "description": "必须带时区；内部规范为UTC；拒绝naive时间",
+            "format": "date-time",
+            "title": "Available At",
+            "type": "string"
+          },
+          "research_available_at": {
+            "anyOf": [
+              {
+                "description": "必须带时区；内部规范为UTC；拒绝naive时间",
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Research Available At"
+          }
+        },
+        "required": [
+          "object_id",
+          "version",
+          "available_at"
+        ],
+        "title": "InputVersionRef",
+        "type": "object"
+      },
+      "PublicPIT": {
+        "additionalProperties": false,
+        "properties": {
+          "public_available_at": {
+            "description": "必须带时区；内部规范为UTC；拒绝naive时间",
+            "format": "date-time",
+            "title": "Public Available At",
+            "type": "string"
+          },
+          "research_available_at": {
+            "description": "必须带时区；内部规范为UTC；拒绝naive时间",
+            "format": "date-time",
+            "title": "Research Available At",
+            "type": "string"
+          },
+          "availability_proof": {
+            "description": "不可变历史版本及公开时间的证据定位；不是主观推测",
+            "minLength": 1,
+            "pattern": "\\S",
+            "title": "Availability Proof",
+            "type": "string"
+          },
+          "simulated_latency_seconds": {
+            "minimum": 0,
+            "title": "Simulated Latency Seconds",
+            "type": "number"
+          }
+        },
+        "required": [
+          "public_available_at",
+          "research_available_at",
+          "availability_proof",
+          "simulated_latency_seconds"
+        ],
+        "title": "PublicPIT",
+        "type": "object"
+      },
+      "VersionRef": {
+        "additionalProperties": false,
+        "properties": {
+          "object_id": {
+            "description": "引用的稳定对象ID；不得使用动态latest",
+            "minLength": 1,
+            "pattern": "\\S",
+            "title": "Object Id",
+            "type": "string"
+          },
+          "version": {
+            "description": "引用的具体正整数版本",
+            "exclusiveMinimum": 0,
+            "title": "Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "object_id",
+          "version"
+        ],
+        "title": "VersionRef",
+        "type": "object"
+      }
+    },
+    "additionalProperties": false,
+    "properties": {
+      "object_id": {
+        "description": "非空文本，保留原值",
+        "minLength": 1,
+        "pattern": "\\S",
+        "title": "Object Id",
+        "type": "string"
+      },
+      "version": {
+        "exclusiveMinimum": 0,
+        "title": "Version",
+        "type": "integer"
+      },
+      "schema_version": {
+        "const": "X_EVENT_V0.1",
+        "default": "X_EVENT_V0.1",
+        "title": "Schema Version",
+        "type": "string"
+      },
+      "recorded_at": {
+        "description": "该版本成功耐久化提交完成时间；Phase1仅校验fixture声明",
+        "format": "date-time",
+        "title": "Recorded At",
+        "type": "string"
+      },
+      "available_at": {
+        "description": "正式研究可用时间，不早于提交及输入门槛",
+        "format": "date-time",
+        "title": "Available At",
+        "type": "string"
+      },
+      "effective_from": {
+        "anyOf": [
+          {
+            "description": "必须带时区；内部规范为UTC；拒绝naive时间",
+            "format": "date-time",
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Effective From"
+      },
+      "effective_to": {
+        "anyOf": [
+          {
+            "description": "必须带时区；内部规范为UTC；拒绝naive时间",
+            "format": "date-time",
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Effective To"
+      },
+      "supersedes_version": {
+        "anyOf": [
+          {
+            "exclusiveMinimum": 0,
+            "type": "integer"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Supersedes Version"
+      },
+      "evidence_refs": {
+        "default": [],
+        "items": {
+          "$ref": "#/$defs/VersionRef"
+        },
+        "title": "Evidence Refs",
+        "type": "array"
+      },
+      "input_version_refs": {
+        "default": [],
+        "items": {
+          "$ref": "#/$defs/InputVersionRef"
+        },
+        "title": "Input Version Refs",
+        "type": "array"
+      },
+      "run_id": {
+        "description": "非空文本，保留原值",
+        "minLength": 1,
+        "pattern": "\\S",
+        "title": "Run Id",
+        "type": "string"
+      },
+      "policy_version": {
+        "description": "非空文本，保留原值",
+        "minLength": 1,
+        "pattern": "\\S",
+        "title": "Policy Version",
+        "type": "string"
+      },
+      "status": {
+        "default": "READY",
+        "enum": [
+          "READY",
+          "DEGRADED",
+          "HOLD",
+          "QUARANTINED"
+        ],
+        "title": "Status",
+        "type": "string"
+      },
+      "reason_codes": {
+        "default": [],
+        "items": {
+          "description": "非空文本，保留原值",
+          "minLength": 1,
+          "pattern": "\\S",
+          "type": "string"
+        },
+        "title": "Reason Codes",
+        "type": "array"
+      },
+      "content_hash": {
+        "description": "SHA-256十六进制摘要；不代表内容真实",
+        "pattern": "^[0-9a-f]{64}$",
+        "title": "Content Hash",
+        "type": "string"
+      },
+      "mode": {
+        "default": "LIVE_FORWARD",
+        "enum": [
+          "LIVE_FORWARD",
+          "OBSERVED_REPLAY",
+          "PUBLIC_PIT_RESEARCH"
+        ],
+        "title": "Mode",
+        "type": "string"
+      },
+      "public_pit": {
+        "anyOf": [
+          {
+            "$ref": "#/$defs/PublicPIT"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null
+      }
+    },
+    "required": [
+      "object_id",
+      "version",
+      "recorded_at",
+      "available_at",
+      "run_id",
+      "policy_version",
+      "content_hash"
+    ],
+    "title": "VersionEnvelope",
+    "type": "object"
+  },
+  "Source": {
+    "$defs": {
+      "InputVersionRef": {
+        "additionalProperties": false,
+        "properties": {
+          "object_id": {
+            "description": "引用的稳定对象ID；不得使用动态latest",
+            "minLength": 1,
+            "pattern": "\\S",
+            "title": "Object Id",
+            "type": "string"
+          },
+          "version": {
+            "description": "引用的具体正整数版本",
+            "exclusiveMinimum": 0,
+            "title": "Version",
+            "type": "integer"
+          },
+          "available_at": {
+            "description": "必须带时区；内部规范为UTC；拒绝naive时间",
+            "format": "date-time",
+            "title": "Available At",
+            "type": "string"
+          },
+          "research_available_at": {
+            "anyOf": [
+              {
+                "description": "必须带时区；内部规范为UTC；拒绝naive时间",
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Research Available At"
+          }
+        },
+        "required": [
+          "object_id",
+          "version",
+          "available_at"
+        ],
+        "title": "InputVersionRef",
+        "type": "object"
+      },
+      "PublicPIT": {
+        "additionalProperties": false,
+        "properties": {
+          "public_available_at": {
+            "description": "必须带时区；内部规范为UTC；拒绝naive时间",
+            "format": "date-time",
+            "title": "Public Available At",
+            "type": "string"
+          },
+          "research_available_at": {
+            "description": "必须带时区；内部规范为UTC；拒绝naive时间",
+            "format": "date-time",
+            "title": "Research Available At",
+            "type": "string"
+          },
+          "availability_proof": {
+            "description": "不可变历史版本及公开时间的证据定位；不是主观推测",
+            "minLength": 1,
+            "pattern": "\\S",
+            "title": "Availability Proof",
+            "type": "string"
+          },
+          "simulated_latency_seconds": {
+            "minimum": 0,
+            "title": "Simulated Latency Seconds",
+            "type": "number"
+          }
+        },
+        "required": [
+          "public_available_at",
+          "research_available_at",
+          "availability_proof",
+          "simulated_latency_seconds"
+        ],
+        "title": "PublicPIT",
+        "type": "object"
+      },
+      "VersionRef": {
+        "additionalProperties": false,
+        "properties": {
+          "object_id": {
+            "description": "引用的稳定对象ID；不得使用动态latest",
+            "minLength": 1,
+            "pattern": "\\S",
+            "title": "Object Id",
+            "type": "string"
+          },
+          "version": {
+            "description": "引用的具体正整数版本",
+            "exclusiveMinimum": 0,
+            "title": "Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "object_id",
+          "version"
+        ],
+        "title": "VersionRef",
+        "type": "object"
+      }
+    },
+    "additionalProperties": false,
+    "properties": {
+      "object_id": {
+        "description": "非空文本，保留原值",
+        "minLength": 1,
+        "pattern": "\\S",
+        "title": "Object Id",
+        "type": "string"
+      },
+      "version": {
+        "exclusiveMinimum": 0,
+        "title": "Version",
+        "type": "integer"
+      },
+      "schema_version": {
+        "const": "X_EVENT_V0.1",
+        "default": "X_EVENT_V0.1",
+        "title": "Schema Version",
+        "type": "string"
+      },
+      "recorded_at": {
+        "description": "该版本成功耐久化提交完成时间；Phase1仅校验fixture声明",
+        "format": "date-time",
+        "title": "Recorded At",
+        "type": "string"
+      },
+      "available_at": {
+        "description": "正式研究可用时间，不早于提交及输入门槛",
+        "format": "date-time",
+        "title": "Available At",
+        "type": "string"
+      },
+      "effective_from": {
+        "anyOf": [
+          {
+            "description": "必须带时区；内部规范为UTC；拒绝naive时间",
+            "format": "date-time",
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Effective From"
+      },
+      "effective_to": {
+        "anyOf": [
+          {
+            "description": "必须带时区；内部规范为UTC；拒绝naive时间",
+            "format": "date-time",
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Effective To"
+      },
+      "supersedes_version": {
+        "anyOf": [
+          {
+            "exclusiveMinimum": 0,
+            "type": "integer"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Supersedes Version"
+      },
+      "evidence_refs": {
+        "default": [],
+        "items": {
+          "$ref": "#/$defs/VersionRef"
+        },
+        "title": "Evidence Refs",
+        "type": "array"
+      },
+      "input_version_refs": {
+        "default": [],
+        "items": {
+          "$ref": "#/$defs/InputVersionRef"
+        },
+        "title": "Input Version Refs",
+        "type": "array"
+      },
+      "run_id": {
+        "description": "非空文本，保留原值",
+        "minLength": 1,
+        "pattern": "\\S",
+        "title": "Run Id",
+        "type": "string"
+      },
+      "policy_version": {
+        "description": "非空文本，保留原值",
+        "minLength": 1,
+        "pattern": "\\S",
+        "title": "Policy Version",
+        "type": "string"
+      },
+      "status": {
+        "default": "READY",
+        "enum": [
+          "READY",
+          "DEGRADED",
+          "HOLD",
+          "QUARANTINED"
+        ],
+        "title": "Status",
+        "type": "string"
+      },
+      "reason_codes": {
+        "default": [],
+        "items": {
+          "description": "非空文本，保留原值",
+          "minLength": 1,
+          "pattern": "\\S",
+          "type": "string"
+        },
+        "title": "Reason Codes",
+        "type": "array"
+      },
+      "content_hash": {
+        "description": "SHA-256十六进制摘要；不代表内容真实",
+        "pattern": "^[0-9a-f]{64}$",
+        "title": "Content Hash",
+        "type": "string"
+      },
+      "mode": {
+        "default": "LIVE_FORWARD",
+        "enum": [
+          "LIVE_FORWARD",
+          "OBSERVED_REPLAY",
+          "PUBLIC_PIT_RESEARCH"
+        ],
+        "title": "Mode",
+        "type": "string"
+      },
+      "public_pit": {
+        "anyOf": [
+          {
+            "$ref": "#/$defs/PublicPIT"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null
+      },
+      "source_id": {
+        "description": "非空文本，保留原值",
+        "minLength": 1,
+        "pattern": "\\S",
+        "title": "Source Id",
+        "type": "string"
+      },
+      "name_zh": {
+        "description": "来源中文名称",
+        "minLength": 1,
+        "pattern": "\\S",
+        "title": "Name Zh",
+        "type": "string"
+      },
+      "platform": {
+        "description": "非空文本，保留原值",
+        "minLength": 1,
+        "pattern": "\\S",
+        "title": "Platform",
+        "type": "string"
+      },
+      "canonical_locator": {
+        "description": "非空文本，保留原值",
+        "minLength": 1,
+        "pattern": "\\S",
+        "title": "Canonical Locator",
+        "type": "string"
+      },
+      "identity_status": {
+        "default": "UNVERIFIED",
+        "enum": [
+          "VERIFIED",
+          "UNVERIFIED",
+          "DISPUTED"
+        ],
+        "title": "Identity Status",
+        "type": "string"
+      },
+      "tier": {
+        "enum": [
+          "S0",
+          "S1",
+          "S2",
+          "S3",
+          "S4"
+        ],
+        "title": "Tier",
+        "type": "string"
+      },
+      "roles": {
+        "items": {
+          "enum": [
+            "FACT",
+            "POLICY_INTENT",
+            "EXPLANATION",
+            "NARRATIVE",
+            "DIFFUSION"
+          ],
+          "type": "string"
+        },
+        "title": "Roles",
+        "type": "array"
+      },
+      "access_method": {
+        "description": "非空文本，保留原值",
+        "minLength": 1,
+        "pattern": "\\S",
+        "title": "Access Method",
+        "type": "string"
+      },
+      "retention_policy": {
+        "description": "非空文本，保留原值",
+        "minLength": 1,
+        "pattern": "\\S",
+        "title": "Retention Policy",
+        "type": "string"
+      },
+      "enabled": {
+        "default": false,
+        "title": "Enabled",
+        "type": "boolean"
+      },
+      "terms_status": {
+        "default": "UNKNOWN",
+        "enum": [
+          "UNKNOWN",
+          "REVIEWED",
+          "UNAVAILABLE"
+        ],
+        "title": "Terms Status",
+        "type": "string"
+      },
+      "authorization_status": {
+        "default": "UNKNOWN",
+        "enum": [
+          "UNKNOWN",
+          "AUTHORIZED",
+          "NOT_REQUIRED",
+          "DENIED"
+        ],
+        "title": "Authorization Status",
+        "type": "string"
+      },
+      "allowed_uses": {
+        "anyOf": [
+          {
+            "items": {
+              "description": "非空文本，保留原值",
+              "minLength": 1,
+              "pattern": "\\S",
+              "type": "string"
+            },
+            "type": "array"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "description": "null=未知，[]无已允许用途；公开访问不等于授权",
+        "title": "Allowed Uses"
+      },
+      "raw_retention_allowed": {
+        "anyOf": [
+          {
+            "type": "boolean"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "description": "null=UNKNOWN；不推定可以永久留存",
+        "title": "Raw Retention Allowed"
+      },
+      "access_restrictions": {
+        "anyOf": [
+          {
+            "items": {
+              "description": "非空文本，保留原值",
+              "minLength": 1,
+              "pattern": "\\S",
+              "type": "string"
+            },
+            "type": "array"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Access Restrictions"
+      }
+    },
+    "required": [
+      "object_id",
+      "version",
+      "recorded_at",
+      "available_at",
+      "run_id",
+      "policy_version",
+      "content_hash",
+      "source_id",
+      "name_zh",
+      "platform",
+      "canonical_locator",
+      "tier",
+      "roles",
+      "access_method",
+      "retention_policy"
+    ],
+    "title": "Source",
+    "type": "object"
+  },
+  "SourceTopicProfile": {
+    "$defs": {
+      "InputVersionRef": {
+        "additionalProperties": false,
+        "properties": {
+          "object_id": {
+            "description": "引用的稳定对象ID；不得使用动态latest",
+            "minLength": 1,
+            "pattern": "\\S",
+            "title": "Object Id",
+            "type": "string"
+          },
+          "version": {
+            "description": "引用的具体正整数版本",
+            "exclusiveMinimum": 0,
+            "title": "Version",
+            "type": "integer"
+          },
+          "available_at": {
+            "description": "必须带时区；内部规范为UTC；拒绝naive时间",
+            "format": "date-time",
+            "title": "Available At",
+            "type": "string"
+          },
+          "research_available_at": {
+            "anyOf": [
+              {
+                "description": "必须带时区；内部规范为UTC；拒绝naive时间",
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Research Available At"
+          }
+        },
+        "required": [
+          "object_id",
+          "version",
+          "available_at"
+        ],
+        "title": "InputVersionRef",
+        "type": "object"
+      },
+      "PublicPIT": {
+        "additionalProperties": false,
+        "properties": {
+          "public_available_at": {
+            "description": "必须带时区；内部规范为UTC；拒绝naive时间",
+            "format": "date-time",
+            "title": "Public Available At",
+            "type": "string"
+          },
+          "research_available_at": {
+            "description": "必须带时区；内部规范为UTC；拒绝naive时间",
+            "format": "date-time",
+            "title": "Research Available At",
+            "type": "string"
+          },
+          "availability_proof": {
+            "description": "不可变历史版本及公开时间的证据定位；不是主观推测",
+            "minLength": 1,
+            "pattern": "\\S",
+            "title": "Availability Proof",
+            "type": "string"
+          },
+          "simulated_latency_seconds": {
+            "minimum": 0,
+            "title": "Simulated Latency Seconds",
+            "type": "number"
+          }
+        },
+        "required": [
+          "public_available_at",
+          "research_available_at",
+          "availability_proof",
+          "simulated_latency_seconds"
+        ],
+        "title": "PublicPIT",
+        "type": "object"
+      },
+      "SampleStatistic": {
+        "additionalProperties": false,
+        "properties": {
+          "numerator": {
+            "minimum": 0,
+            "title": "Numerator",
+            "type": "integer"
+          },
+          "denominator": {
+            "minimum": 0,
+            "title": "Denominator",
+            "type": "integer"
+          },
+          "outcome_available_at": {
+            "description": "这些统计结果最晚何时可知，禁止未来结果回填",
+            "format": "date-time",
+            "title": "Outcome Available At",
+            "type": "string"
+          },
+          "rate": {
+            "anyOf": [
+              {
+                "maximum": 1,
+                "minimum": 0,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Rate"
+          },
+          "missing_reason": {
+            "anyOf": [
+              {
+                "description": "非空文本，保留原值",
+                "minLength": 1,
+                "pattern": "\\S",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Missing Reason"
+          }
+        },
+        "required": [
+          "numerator",
+          "denominator",
+          "outcome_available_at"
+        ],
+        "title": "SampleStatistic",
+        "type": "object"
+      },
+      "VersionRef": {
+        "additionalProperties": false,
+        "properties": {
+          "object_id": {
+            "description": "引用的稳定对象ID；不得使用动态latest",
+            "minLength": 1,
+            "pattern": "\\S",
+            "title": "Object Id",
+            "type": "string"
+          },
+          "version": {
+            "description": "引用的具体正整数版本",
+            "exclusiveMinimum": 0,
+            "title": "Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "object_id",
+          "version"
+        ],
+        "title": "VersionRef",
+        "type": "object"
+      }
+    },
+    "additionalProperties": false,
+    "properties": {
+      "object_id": {
+        "description": "非空文本，保留原值",
+        "minLength": 1,
+        "pattern": "\\S",
+        "title": "Object Id",
+        "type": "string"
+      },
+      "version": {
+        "exclusiveMinimum": 0,
+        "title": "Version",
+        "type": "integer"
+      },
+      "schema_version": {
+        "const": "X_EVENT_V0.1",
+        "default": "X_EVENT_V0.1",
+        "title": "Schema Version",
+        "type": "string"
+      },
+      "recorded_at": {
+        "description": "该版本成功耐久化提交完成时间；Phase1仅校验fixture声明",
+        "format": "date-time",
+        "title": "Recorded At",
+        "type": "string"
+      },
+      "available_at": {
+        "description": "正式研究可用时间，不早于提交及输入门槛",
+        "format": "date-time",
+        "title": "Available At",
+        "type": "string"
+      },
+      "effective_from": {
+        "anyOf": [
+          {
+            "description": "必须带时区；内部规范为UTC；拒绝naive时间",
+            "format": "date-time",
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Effective From"
+      },
+      "effective_to": {
+        "anyOf": [
+          {
+            "description": "必须带时区；内部规范为UTC；拒绝naive时间",
+            "format": "date-time",
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Effective To"
+      },
+      "supersedes_version": {
+        "anyOf": [
+          {
+            "exclusiveMinimum": 0,
+            "type": "integer"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Supersedes Version"
+      },
+      "evidence_refs": {
+        "default": [],
+        "items": {
+          "$ref": "#/$defs/VersionRef"
+        },
+        "title": "Evidence Refs",
+        "type": "array"
+      },
+      "input_version_refs": {
+        "default": [],
+        "items": {
+          "$ref": "#/$defs/InputVersionRef"
+        },
+        "title": "Input Version Refs",
+        "type": "array"
+      },
+      "run_id": {
+        "description": "非空文本，保留原值",
+        "minLength": 1,
+        "pattern": "\\S",
+        "title": "Run Id",
+        "type": "string"
+      },
+      "policy_version": {
+        "description": "非空文本，保留原值",
+        "minLength": 1,
+        "pattern": "\\S",
+        "title": "Policy Version",
+        "type": "string"
+      },
+      "status": {
+        "default": "READY",
+        "enum": [
+          "READY",
+          "DEGRADED",
+          "HOLD",
+          "QUARANTINED"
+        ],
+        "title": "Status",
+        "type": "string"
+      },
+      "reason_codes": {
+        "default": [],
+        "items": {
+          "description": "非空文本，保留原值",
+          "minLength": 1,
+          "pattern": "\\S",
+          "type": "string"
+        },
+        "title": "Reason Codes",
+        "type": "array"
+      },
+      "content_hash": {
+        "description": "SHA-256十六进制摘要；不代表内容真实",
+        "pattern": "^[0-9a-f]{64}$",
+        "title": "Content Hash",
+        "type": "string"
+      },
+      "mode": {
+        "default": "LIVE_FORWARD",
+        "enum": [
+          "LIVE_FORWARD",
+          "OBSERVED_REPLAY",
+          "PUBLIC_PIT_RESEARCH"
+        ],
+        "title": "Mode",
+        "type": "string"
+      },
+      "public_pit": {
+        "anyOf": [
+          {
+            "$ref": "#/$defs/PublicPIT"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null
+      },
+      "computed_at": {
+        "description": "派生结果实际完成时间；不能用研究开始时间替代",
+        "format": "date-time",
+        "title": "Computed At",
+        "type": "string"
+      },
+      "research_computed_at": {
+        "anyOf": [
+          {
+            "description": "必须带时区；内部规范为UTC；拒绝naive时间",
+            "format": "date-time",
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Research Computed At"
+      },
+      "source_id": {
+        "description": "非空文本，保留原值",
+        "minLength": 1,
+        "pattern": "\\S",
+        "title": "Source Id",
+        "type": "string"
+      },
+      "source_ref": {
+        "$ref": "#/$defs/VersionRef"
+      },
+      "topic_id": {
+        "description": "非空文本，保留原值",
+        "minLength": 1,
+        "pattern": "\\S",
+        "title": "Topic Id",
+        "type": "string"
+      },
+      "reliability_band": {
+        "default": "UNKNOWN",
+        "enum": [
+          "VERY_LOW",
+          "LOW",
+          "MEDIUM",
+          "HIGH",
+          "VERY_HIGH",
+          "UNKNOWN"
+        ],
+        "title": "Reliability Band",
+        "type": "string"
+      },
+      "expertise_band": {
+        "default": "UNKNOWN",
+        "enum": [
+          "VERY_LOW",
+          "LOW",
+          "MEDIUM",
+          "HIGH",
+          "VERY_HIGH",
+          "UNKNOWN"
+        ],
+        "title": "Expertise Band",
+        "type": "string"
+      },
+      "influence_band": {
+        "default": "UNKNOWN",
+        "enum": [
+          "VERY_LOW",
+          "LOW",
+          "MEDIUM",
+          "HIGH",
+          "VERY_HIGH",
+          "UNKNOWN"
+        ],
+        "title": "Influence Band",
+        "type": "string"
+      },
+      "diffusion_band": {
+        "default": "UNKNOWN",
+        "enum": [
+          "VERY_LOW",
+          "LOW",
+          "MEDIUM",
+          "HIGH",
+          "VERY_HIGH",
+          "UNKNOWN"
+        ],
+        "title": "Diffusion Band",
+        "type": "string"
+      },
+      "lead_time_stats": {
+        "anyOf": [
+          {
+            "$ref": "#/$defs/SampleStatistic"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null
+      },
+      "missing_reason": {
+        "anyOf": [
+          {
+            "description": "非空文本，保留原值",
+            "minLength": 1,
+            "pattern": "\\S",
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": "UNKNOWN",
+        "title": "Missing Reason"
+      }
+    },
+    "required": [
+      "object_id",
+      "version",
+      "recorded_at",
+      "available_at",
+      "run_id",
+      "policy_version",
+      "content_hash",
+      "computed_at",
+      "source_id",
+      "source_ref",
+      "topic_id"
+    ],
+    "title": "SourceTopicProfile",
+    "type": "object"
+  },
+  "NarrativeSourceProfile": {
+    "$defs": {
+      "InputVersionRef": {
+        "additionalProperties": false,
+        "properties": {
+          "object_id": {
+            "description": "引用的稳定对象ID；不得使用动态latest",
+            "minLength": 1,
+            "pattern": "\\S",
+            "title": "Object Id",
+            "type": "string"
+          },
+          "version": {
+            "description": "引用的具体正整数版本",
+            "exclusiveMinimum": 0,
+            "title": "Version",
+            "type": "integer"
+          },
+          "available_at": {
+            "description": "必须带时区；内部规范为UTC；拒绝naive时间",
+            "format": "date-time",
+            "title": "Available At",
+            "type": "string"
+          },
+          "research_available_at": {
+            "anyOf": [
+              {
+                "description": "必须带时区；内部规范为UTC；拒绝naive时间",
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Research Available At"
+          }
+        },
+        "required": [
+          "object_id",
+          "version",
+          "available_at"
+        ],
+        "title": "InputVersionRef",
+        "type": "object"
+      },
+      "ObservationWindow": {
+        "additionalProperties": false,
+        "properties": {
+          "start": {
+            "description": "必须带时区；内部规范为UTC；拒绝naive时间",
+            "format": "date-time",
+            "title": "Start",
+            "type": "string"
+          },
+          "end": {
+            "description": "必须带时区；内部规范为UTC；拒绝naive时间",
+            "format": "date-time",
+            "title": "End",
+            "type": "string"
+          }
+        },
+        "required": [
+          "start",
+          "end"
+        ],
+        "title": "ObservationWindow",
+        "type": "object"
+      },
+      "PublicPIT": {
+        "additionalProperties": false,
+        "properties": {
+          "public_available_at": {
+            "description": "必须带时区；内部规范为UTC；拒绝naive时间",
+            "format": "date-time",
+            "title": "Public Available At",
+            "type": "string"
+          },
+          "research_available_at": {
+            "description": "必须带时区；内部规范为UTC；拒绝naive时间",
+            "format": "date-time",
+            "title": "Research Available At",
+            "type": "string"
+          },
+          "availability_proof": {
+            "description": "不可变历史版本及公开时间的证据定位；不是主观推测",
+            "minLength": 1,
+            "pattern": "\\S",
+            "title": "Availability Proof",
+            "type": "string"
+          },
+          "simulated_latency_seconds": {
+            "minimum": 0,
+            "title": "Simulated Latency Seconds",
+            "type": "number"
+          }
+        },
+        "required": [
+          "public_available_at",
+          "research_available_at",
+          "availability_proof",
+          "simulated_latency_seconds"
+        ],
+        "title": "PublicPIT",
+        "type": "object"
+      },
+      "SampleStatistic": {
+        "additionalProperties": false,
+        "properties": {
+          "numerator": {
+            "minimum": 0,
+            "title": "Numerator",
+            "type": "integer"
+          },
+          "denominator": {
+            "minimum": 0,
+            "title": "Denominator",
+            "type": "integer"
+          },
+          "outcome_available_at": {
+            "description": "这些统计结果最晚何时可知，禁止未来结果回填",
+            "format": "date-time",
+            "title": "Outcome Available At",
+            "type": "string"
+          },
+          "rate": {
+            "anyOf": [
+              {
+                "maximum": 1,
+                "minimum": 0,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Rate"
+          },
+          "missing_reason": {
+            "anyOf": [
+              {
+                "description": "非空文本，保留原值",
+                "minLength": 1,
+                "pattern": "\\S",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Missing Reason"
+          }
+        },
+        "required": [
+          "numerator",
+          "denominator",
+          "outcome_available_at"
+        ],
+        "title": "SampleStatistic",
+        "type": "object"
+      },
+      "VersionRef": {
+        "additionalProperties": false,
+        "properties": {
+          "object_id": {
+            "description": "引用的稳定对象ID；不得使用动态latest",
+            "minLength": 1,
+            "pattern": "\\S",
+            "title": "Object Id",
+            "type": "string"
+          },
+          "version": {
+            "description": "引用的具体正整数版本",
+            "exclusiveMinimum": 0,
+            "title": "Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "object_id",
+          "version"
+        ],
+        "title": "VersionRef",
+        "type": "object"
+      }
+    },
+    "additionalProperties": false,
+    "properties": {
+      "object_id": {
+        "description": "非空文本，保留原值",
+        "minLength": 1,
+        "pattern": "\\S",
+        "title": "Object Id",
+        "type": "string"
+      },
+      "version": {
+        "exclusiveMinimum": 0,
+        "title": "Version",
+        "type": "integer"
+      },
+      "schema_version": {
+        "const": "X_EVENT_V0.1",
+        "default": "X_EVENT_V0.1",
+        "title": "Schema Version",
+        "type": "string"
+      },
+      "recorded_at": {
+        "description": "该版本成功耐久化提交完成时间；Phase1仅校验fixture声明",
+        "format": "date-time",
+        "title": "Recorded At",
+        "type": "string"
+      },
+      "available_at": {
+        "description": "正式研究可用时间，不早于提交及输入门槛",
+        "format": "date-time",
+        "title": "Available At",
+        "type": "string"
+      },
+      "effective_from": {
+        "anyOf": [
+          {
+            "description": "必须带时区；内部规范为UTC；拒绝naive时间",
+            "format": "date-time",
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Effective From"
+      },
+      "effective_to": {
+        "anyOf": [
+          {
+            "description": "必须带时区；内部规范为UTC；拒绝naive时间",
+            "format": "date-time",
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Effective To"
+      },
+      "supersedes_version": {
+        "anyOf": [
+          {
+            "exclusiveMinimum": 0,
+            "type": "integer"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Supersedes Version"
+      },
+      "evidence_refs": {
+        "default": [],
+        "items": {
+          "$ref": "#/$defs/VersionRef"
+        },
+        "title": "Evidence Refs",
+        "type": "array"
+      },
+      "input_version_refs": {
+        "default": [],
+        "items": {
+          "$ref": "#/$defs/InputVersionRef"
+        },
+        "title": "Input Version Refs",
+        "type": "array"
+      },
+      "run_id": {
+        "description": "非空文本，保留原值",
+        "minLength": 1,
+        "pattern": "\\S",
+        "title": "Run Id",
+        "type": "string"
+      },
+      "policy_version": {
+        "description": "非空文本，保留原值",
+        "minLength": 1,
+        "pattern": "\\S",
+        "title": "Policy Version",
+        "type": "string"
+      },
+      "status": {
+        "default": "READY",
+        "enum": [
+          "READY",
+          "DEGRADED",
+          "HOLD",
+          "QUARANTINED"
+        ],
+        "title": "Status",
+        "type": "string"
+      },
+      "reason_codes": {
+        "default": [],
+        "items": {
+          "description": "非空文本，保留原值",
+          "minLength": 1,
+          "pattern": "\\S",
+          "type": "string"
+        },
+        "title": "Reason Codes",
+        "type": "array"
+      },
+      "content_hash": {
+        "description": "SHA-256十六进制摘要；不代表内容真实",
+        "pattern": "^[0-9a-f]{64}$",
+        "title": "Content Hash",
+        "type": "string"
+      },
+      "mode": {
+        "default": "LIVE_FORWARD",
+        "enum": [
+          "LIVE_FORWARD",
+          "OBSERVED_REPLAY",
+          "PUBLIC_PIT_RESEARCH"
+        ],
+        "title": "Mode",
+        "type": "string"
+      },
+      "public_pit": {
+        "anyOf": [
+          {
+            "$ref": "#/$defs/PublicPIT"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null
+      },
+      "computed_at": {
+        "description": "派生结果实际完成时间；不能用研究开始时间替代",
+        "format": "date-time",
+        "title": "Computed At",
+        "type": "string"
+      },
+      "research_computed_at": {
+        "anyOf": [
+          {
+            "description": "必须带时区；内部规范为UTC；拒绝naive时间",
+            "format": "date-time",
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Research Computed At"
+      },
+      "source_id": {
+        "description": "非空文本，保留原值",
+        "minLength": 1,
+        "pattern": "\\S",
+        "title": "Source Id",
+        "type": "string"
+      },
+      "source_ref": {
+        "$ref": "#/$defs/VersionRef"
+      },
+      "topic_id": {
+        "description": "非空文本，保留原值",
+        "minLength": 1,
+        "pattern": "\\S",
+        "title": "Topic Id",
+        "type": "string"
+      },
+      "reliability_band": {
+        "default": "UNKNOWN",
+        "enum": [
+          "VERY_LOW",
+          "LOW",
+          "MEDIUM",
+          "HIGH",
+          "VERY_HIGH",
+          "UNKNOWN"
+        ],
+        "title": "Reliability Band",
+        "type": "string"
+      },
+      "expertise_band": {
+        "default": "UNKNOWN",
+        "enum": [
+          "VERY_LOW",
+          "LOW",
+          "MEDIUM",
+          "HIGH",
+          "VERY_HIGH",
+          "UNKNOWN"
+        ],
+        "title": "Expertise Band",
+        "type": "string"
+      },
+      "influence_band": {
+        "default": "UNKNOWN",
+        "enum": [
+          "VERY_LOW",
+          "LOW",
+          "MEDIUM",
+          "HIGH",
+          "VERY_HIGH",
+          "UNKNOWN"
+        ],
+        "title": "Influence Band",
+        "type": "string"
+      },
+      "diffusion_band": {
+        "default": "UNKNOWN",
+        "enum": [
+          "VERY_LOW",
+          "LOW",
+          "MEDIUM",
+          "HIGH",
+          "VERY_HIGH",
+          "UNKNOWN"
+        ],
+        "title": "Diffusion Band",
+        "type": "string"
+      },
+      "lead_time_stats": {
+        "anyOf": [
+          {
+            "$ref": "#/$defs/SampleStatistic"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null
+      },
+      "missing_reason": {
+        "anyOf": [
+          {
+            "description": "非空文本，保留原值",
+            "minLength": 1,
+            "pattern": "\\S",
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": "UNKNOWN",
+        "title": "Missing Reason"
+      },
+      "category": {
+        "enum": [
+          "INDUSTRY_LEADER",
+          "EXPLAINER",
+          "ATTENTION_MOVER",
+          "FOLLOWER",
+          "NOISE",
+          "UNKNOWN"
+        ],
+        "title": "Category",
+        "type": "string"
+      },
+      "followers": {
+        "anyOf": [
+          {
+            "minimum": 0,
+            "type": "integer"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "description": "粉丝数不等于事实可信度，不自动改变reliability_band",
+        "title": "Followers"
+      },
+      "originality": {
+        "anyOf": [
+          {
+            "maximum": 1,
+            "minimum": 0,
+            "type": "number"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Originality"
+      },
+      "citation_rate": {
+        "anyOf": [
+          {
+            "maximum": 1,
+            "minimum": 0,
+            "type": "number"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Citation Rate"
+      },
+      "leading_stats": {
+        "anyOf": [
+          {
+            "$ref": "#/$defs/SampleStatistic"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null
+      },
+      "following_stats": {
+        "anyOf": [
+          {
+            "$ref": "#/$defs/SampleStatistic"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null
+      },
+      "posthoc_stats": {
+        "anyOf": [
+          {
+            "$ref": "#/$defs/SampleStatistic"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null
+      },
+      "edit_stats": {
+        "anyOf": [
+          {
+            "$ref": "#/$defs/SampleStatistic"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null
+      },
+      "delete_stats": {
+        "anyOf": [
+          {
+            "$ref": "#/$defs/SampleStatistic"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null
+      },
+      "sample_n": {
+        "minimum": 0,
+        "title": "Sample N",
+        "type": "integer"
+      },
+      "observation_window": {
+        "$ref": "#/$defs/ObservationWindow"
+      }
+    },
+    "required": [
+      "object_id",
+      "version",
+      "recorded_at",
+      "available_at",
+      "run_id",
+      "policy_version",
+      "content_hash",
+      "computed_at",
+      "source_id",
+      "source_ref",
+      "topic_id",
+      "category",
+      "sample_n",
+      "observation_window"
+    ],
+    "title": "NarrativeSourceProfile",
+    "type": "object"
+  },
+  "Actor": {
+    "$defs": {
+      "InputVersionRef": {
+        "additionalProperties": false,
+        "properties": {
+          "object_id": {
+            "description": "引用的稳定对象ID；不得使用动态latest",
+            "minLength": 1,
+            "pattern": "\\S",
+            "title": "Object Id",
+            "type": "string"
+          },
+          "version": {
+            "description": "引用的具体正整数版本",
+            "exclusiveMinimum": 0,
+            "title": "Version",
+            "type": "integer"
+          },
+          "available_at": {
+            "description": "必须带时区；内部规范为UTC；拒绝naive时间",
+            "format": "date-time",
+            "title": "Available At",
+            "type": "string"
+          },
+          "research_available_at": {
+            "anyOf": [
+              {
+                "description": "必须带时区；内部规范为UTC；拒绝naive时间",
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Research Available At"
+          }
+        },
+        "required": [
+          "object_id",
+          "version",
+          "available_at"
+        ],
+        "title": "InputVersionRef",
+        "type": "object"
+      },
+      "PublicPIT": {
+        "additionalProperties": false,
+        "properties": {
+          "public_available_at": {
+            "description": "必须带时区；内部规范为UTC；拒绝naive时间",
+            "format": "date-time",
+            "title": "Public Available At",
+            "type": "string"
+          },
+          "research_available_at": {
+            "description": "必须带时区；内部规范为UTC；拒绝naive时间",
+            "format": "date-time",
+            "title": "Research Available At",
+            "type": "string"
+          },
+          "availability_proof": {
+            "description": "不可变历史版本及公开时间的证据定位；不是主观推测",
+            "minLength": 1,
+            "pattern": "\\S",
+            "title": "Availability Proof",
+            "type": "string"
+          },
+          "simulated_latency_seconds": {
+            "minimum": 0,
+            "title": "Simulated Latency Seconds",
+            "type": "number"
+          }
+        },
+        "required": [
+          "public_available_at",
+          "research_available_at",
+          "availability_proof",
+          "simulated_latency_seconds"
+        ],
+        "title": "PublicPIT",
+        "type": "object"
+      },
+      "VersionRef": {
+        "additionalProperties": false,
+        "properties": {
+          "object_id": {
+            "description": "引用的稳定对象ID；不得使用动态latest",
+            "minLength": 1,
+            "pattern": "\\S",
+            "title": "Object Id",
+            "type": "string"
+          },
+          "version": {
+            "description": "引用的具体正整数版本",
+            "exclusiveMinimum": 0,
+            "title": "Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "object_id",
+          "version"
+        ],
+        "title": "VersionRef",
+        "type": "object"
+      }
+    },
+    "additionalProperties": false,
+    "properties": {
+      "object_id": {
+        "description": "非空文本，保留原值",
+        "minLength": 1,
+        "pattern": "\\S",
+        "title": "Object Id",
+        "type": "string"
+      },
+      "version": {
+        "exclusiveMinimum": 0,
+        "title": "Version",
+        "type": "integer"
+      },
+      "schema_version": {
+        "const": "X_EVENT_V0.1",
+        "default": "X_EVENT_V0.1",
+        "title": "Schema Version",
+        "type": "string"
+      },
+      "recorded_at": {
+        "description": "该版本成功耐久化提交完成时间；Phase1仅校验fixture声明",
+        "format": "date-time",
+        "title": "Recorded At",
+        "type": "string"
+      },
+      "available_at": {
+        "description": "正式研究可用时间，不早于提交及输入门槛",
+        "format": "date-time",
+        "title": "Available At",
+        "type": "string"
+      },
+      "effective_from": {
+        "anyOf": [
+          {
+            "description": "必须带时区；内部规范为UTC；拒绝naive时间",
+            "format": "date-time",
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Effective From"
+      },
+      "effective_to": {
+        "anyOf": [
+          {
+            "description": "必须带时区；内部规范为UTC；拒绝naive时间",
+            "format": "date-time",
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Effective To"
+      },
+      "supersedes_version": {
+        "anyOf": [
+          {
+            "exclusiveMinimum": 0,
+            "type": "integer"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Supersedes Version"
+      },
+      "evidence_refs": {
+        "default": [],
+        "items": {
+          "$ref": "#/$defs/VersionRef"
+        },
+        "title": "Evidence Refs",
+        "type": "array"
+      },
+      "input_version_refs": {
+        "default": [],
+        "items": {
+          "$ref": "#/$defs/InputVersionRef"
+        },
+        "title": "Input Version Refs",
+        "type": "array"
+      },
+      "run_id": {
+        "description": "非空文本，保留原值",
+        "minLength": 1,
+        "pattern": "\\S",
+        "title": "Run Id",
+        "type": "string"
+      },
+      "policy_version": {
+        "description": "非空文本，保留原值",
+        "minLength": 1,
+        "pattern": "\\S",
+        "title": "Policy Version",
+        "type": "string"
+      },
+      "status": {
+        "default": "READY",
+        "enum": [
+          "READY",
+          "DEGRADED",
+          "HOLD",
+          "QUARANTINED"
+        ],
+        "title": "Status",
+        "type": "string"
+      },
+      "reason_codes": {
+        "default": [],
+        "items": {
+          "description": "非空文本，保留原值",
+          "minLength": 1,
+          "pattern": "\\S",
+          "type": "string"
+        },
+        "title": "Reason Codes",
+        "type": "array"
+      },
+      "content_hash": {
+        "description": "SHA-256十六进制摘要；不代表内容真实",
+        "pattern": "^[0-9a-f]{64}$",
+        "title": "Content Hash",
+        "type": "string"
+      },
+      "mode": {
+        "default": "LIVE_FORWARD",
+        "enum": [
+          "LIVE_FORWARD",
+          "OBSERVED_REPLAY",
+          "PUBLIC_PIT_RESEARCH"
+        ],
+        "title": "Mode",
+        "type": "string"
+      },
+      "public_pit": {
+        "anyOf": [
+          {
+            "$ref": "#/$defs/PublicPIT"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null
+      },
+      "actor_id": {
+        "description": "非空文本，保留原值",
+        "minLength": 1,
+        "pattern": "\\S",
+        "title": "Actor Id",
+        "type": "string"
+      },
+      "name_zh": {
+        "description": "非空文本，保留原值",
+        "minLength": 1,
+        "pattern": "\\S",
+        "title": "Name Zh",
+        "type": "string"
+      },
+      "entity_type": {
+        "enum": [
+          "PERSON",
+          "INSTITUTION"
+        ],
+        "title": "Entity Type",
+        "type": "string"
+      },
+      "organization_ref": {
+        "anyOf": [
+          {
+            "$ref": "#/$defs/VersionRef"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null
+      },
+      "role_title_zh": {
+        "anyOf": [
+          {
+            "description": "非空文本，保留原值",
+            "minLength": 1,
+            "pattern": "\\S",
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Role Title Zh"
+      },
+      "term_effective_from": {
+        "anyOf": [
+          {
+            "description": "必须带时区；内部规范为UTC；拒绝naive时间",
+            "format": "date-time",
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Term Effective From"
+      },
+      "term_effective_to": {
+        "anyOf": [
+          {
+            "description": "必须带时区；内部规范为UTC；拒绝naive时间",
+            "format": "date-time",
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Term Effective To"
+      },
+      "verified_accounts": {
+        "default": [],
+        "items": {
+          "$ref": "#/$defs/VersionRef"
+        },
+        "title": "Verified Accounts",
+        "type": "array"
+      }
+    },
+    "required": [
+      "object_id",
+      "version",
+      "recorded_at",
+      "available_at",
+      "run_id",
+      "policy_version",
+      "content_hash",
+      "actor_id",
+      "name_zh",
+      "entity_type"
+    ],
+    "title": "Actor",
+    "type": "object"
+  },
+  "ActorTopicProfile": {
+    "$defs": {
+      "InputVersionRef": {
+        "additionalProperties": false,
+        "properties": {
+          "object_id": {
+            "description": "引用的稳定对象ID；不得使用动态latest",
+            "minLength": 1,
+            "pattern": "\\S",
+            "title": "Object Id",
+            "type": "string"
+          },
+          "version": {
+            "description": "引用的具体正整数版本",
+            "exclusiveMinimum": 0,
+            "title": "Version",
+            "type": "integer"
+          },
+          "available_at": {
+            "description": "必须带时区；内部规范为UTC；拒绝naive时间",
+            "format": "date-time",
+            "title": "Available At",
+            "type": "string"
+          },
+          "research_available_at": {
+            "anyOf": [
+              {
+                "description": "必须带时区；内部规范为UTC；拒绝naive时间",
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Research Available At"
+          }
+        },
+        "required": [
+          "object_id",
+          "version",
+          "available_at"
+        ],
+        "title": "InputVersionRef",
+        "type": "object"
+      },
+      "PublicPIT": {
+        "additionalProperties": false,
+        "properties": {
+          "public_available_at": {
+            "description": "必须带时区；内部规范为UTC；拒绝naive时间",
+            "format": "date-time",
+            "title": "Public Available At",
+            "type": "string"
+          },
+          "research_available_at": {
+            "description": "必须带时区；内部规范为UTC；拒绝naive时间",
+            "format": "date-time",
+            "title": "Research Available At",
+            "type": "string"
+          },
+          "availability_proof": {
+            "description": "不可变历史版本及公开时间的证据定位；不是主观推测",
+            "minLength": 1,
+            "pattern": "\\S",
+            "title": "Availability Proof",
+            "type": "string"
+          },
+          "simulated_latency_seconds": {
+            "minimum": 0,
+            "title": "Simulated Latency Seconds",
+            "type": "number"
+          }
+        },
+        "required": [
+          "public_available_at",
+          "research_available_at",
+          "availability_proof",
+          "simulated_latency_seconds"
+        ],
+        "title": "PublicPIT",
+        "type": "object"
+      },
+      "VersionRef": {
+        "additionalProperties": false,
+        "properties": {
+          "object_id": {
+            "description": "引用的稳定对象ID；不得使用动态latest",
+            "minLength": 1,
+            "pattern": "\\S",
+            "title": "Object Id",
+            "type": "string"
+          },
+          "version": {
+            "description": "引用的具体正整数版本",
+            "exclusiveMinimum": 0,
+            "title": "Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "object_id",
+          "version"
+        ],
+        "title": "VersionRef",
+        "type": "object"
+      }
+    },
+    "additionalProperties": false,
+    "properties": {
+      "object_id": {
+        "description": "非空文本，保留原值",
+        "minLength": 1,
+        "pattern": "\\S",
+        "title": "Object Id",
+        "type": "string"
+      },
+      "version": {
+        "exclusiveMinimum": 0,
+        "title": "Version",
+        "type": "integer"
+      },
+      "schema_version": {
+        "const": "X_EVENT_V0.1",
+        "default": "X_EVENT_V0.1",
+        "title": "Schema Version",
+        "type": "string"
+      },
+      "recorded_at": {
+        "description": "该版本成功耐久化提交完成时间；Phase1仅校验fixture声明",
+        "format": "date-time",
+        "title": "Recorded At",
+        "type": "string"
+      },
+      "available_at": {
+        "description": "正式研究可用时间，不早于提交及输入门槛",
+        "format": "date-time",
+        "title": "Available At",
+        "type": "string"
+      },
+      "effective_from": {
+        "anyOf": [
+          {
+            "description": "必须带时区；内部规范为UTC；拒绝naive时间",
+            "format": "date-time",
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Effective From"
+      },
+      "effective_to": {
+        "anyOf": [
+          {
+            "description": "必须带时区；内部规范为UTC；拒绝naive时间",
+            "format": "date-time",
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Effective To"
+      },
+      "supersedes_version": {
+        "anyOf": [
+          {
+            "exclusiveMinimum": 0,
+            "type": "integer"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Supersedes Version"
+      },
+      "evidence_refs": {
+        "default": [],
+        "items": {
+          "$ref": "#/$defs/VersionRef"
+        },
+        "title": "Evidence Refs",
+        "type": "array"
+      },
+      "input_version_refs": {
+        "default": [],
+        "items": {
+          "$ref": "#/$defs/InputVersionRef"
+        },
+        "title": "Input Version Refs",
+        "type": "array"
+      },
+      "run_id": {
+        "description": "非空文本，保留原值",
+        "minLength": 1,
+        "pattern": "\\S",
+        "title": "Run Id",
+        "type": "string"
+      },
+      "policy_version": {
+        "description": "非空文本，保留原值",
+        "minLength": 1,
+        "pattern": "\\S",
+        "title": "Policy Version",
+        "type": "string"
+      },
+      "status": {
+        "default": "READY",
+        "enum": [
+          "READY",
+          "DEGRADED",
+          "HOLD",
+          "QUARANTINED"
+        ],
+        "title": "Status",
+        "type": "string"
+      },
+      "reason_codes": {
+        "default": [],
+        "items": {
+          "description": "非空文本，保留原值",
+          "minLength": 1,
+          "pattern": "\\S",
+          "type": "string"
+        },
+        "title": "Reason Codes",
+        "type": "array"
+      },
+      "content_hash": {
+        "description": "SHA-256十六进制摘要；不代表内容真实",
+        "pattern": "^[0-9a-f]{64}$",
+        "title": "Content Hash",
+        "type": "string"
+      },
+      "mode": {
+        "default": "LIVE_FORWARD",
+        "enum": [
+          "LIVE_FORWARD",
+          "OBSERVED_REPLAY",
+          "PUBLIC_PIT_RESEARCH"
+        ],
+        "title": "Mode",
+        "type": "string"
+      },
+      "public_pit": {
+        "anyOf": [
+          {
+            "$ref": "#/$defs/PublicPIT"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null
+      },
+      "computed_at": {
+        "description": "派生结果实际完成时间；不能用研究开始时间替代",
+        "format": "date-time",
+        "title": "Computed At",
+        "type": "string"
+      },
+      "research_computed_at": {
+        "anyOf": [
+          {
+            "description": "必须带时区；内部规范为UTC；拒绝naive时间",
+            "format": "date-time",
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Research Computed At"
+      },
+      "actor_id": {
+        "description": "非空文本，保留原值",
+        "minLength": 1,
+        "pattern": "\\S",
+        "title": "Actor Id",
+        "type": "string"
+      },
+      "actor_ref": {
+        "$ref": "#/$defs/VersionRef"
+      },
+      "topic_id": {
+        "description": "非空文本，保留原值",
+        "minLength": 1,
+        "pattern": "\\S",
+        "title": "Topic Id",
+        "type": "string"
+      },
+      "policy_authority": {
+        "default": "UNKNOWN",
+        "enum": [
+          "VERY_LOW",
+          "LOW",
+          "MEDIUM",
+          "HIGH",
+          "VERY_HIGH",
+          "UNKNOWN"
+        ],
+        "title": "Policy Authority",
+        "type": "string"
+      },
+      "corporate_authority": {
+        "default": "UNKNOWN",
+        "enum": [
+          "VERY_LOW",
+          "LOW",
+          "MEDIUM",
+          "HIGH",
+          "VERY_HIGH",
+          "UNKNOWN"
+        ],
+        "title": "Corporate Authority",
+        "type": "string"
+      },
+      "expertise_band": {
+        "default": "UNKNOWN",
+        "enum": [
+          "VERY_LOW",
+          "LOW",
+          "MEDIUM",
+          "HIGH",
+          "VERY_HIGH",
+          "UNKNOWN"
+        ],
+        "title": "Expertise Band",
+        "type": "string"
+      },
+      "influence_band": {
+        "default": "UNKNOWN",
+        "enum": [
+          "VERY_LOW",
+          "LOW",
+          "MEDIUM",
+          "HIGH",
+          "VERY_HIGH",
+          "UNKNOWN"
+        ],
+        "title": "Influence Band",
+        "type": "string"
+      },
+      "statement_count": {
+        "minimum": 0,
+        "title": "Statement Count",
+        "type": "integer"
+      },
+      "realized_count": {
+        "minimum": 0,
+        "title": "Realized Count",
+        "type": "integer"
+      },
+      "partial_count": {
+        "minimum": 0,
+        "title": "Partial Count",
+        "type": "integer"
+      },
+      "denied_count": {
+        "minimum": 0,
+        "title": "Denied Count",
+        "type": "integer"
+      },
+      "unresolved_count": {
+        "minimum": 0,
+        "title": "Unresolved Count",
+        "type": "integer"
+      },
+      "outcome_available_at": {
+        "anyOf": [
+          {
+            "description": "必须带时区；内部规范为UTC；拒绝naive时间",
+            "format": "date-time",
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Outcome Available At"
+      }
+    },
+    "required": [
+      "object_id",
+      "version",
+      "recorded_at",
+      "available_at",
+      "run_id",
+      "policy_version",
+      "content_hash",
+      "computed_at",
+      "actor_id",
+      "actor_ref",
+      "topic_id",
+      "statement_count",
+      "realized_count",
+      "partial_count",
+      "denied_count",
+      "unresolved_count"
+    ],
+    "title": "ActorTopicProfile",
+    "type": "object"
+  },
+  "Statement": {
+    "$defs": {
+      "InputVersionRef": {
+        "additionalProperties": false,
+        "properties": {
+          "object_id": {
+            "description": "引用的稳定对象ID；不得使用动态latest",
+            "minLength": 1,
+            "pattern": "\\S",
+            "title": "Object Id",
+            "type": "string"
+          },
+          "version": {
+            "description": "引用的具体正整数版本",
+            "exclusiveMinimum": 0,
+            "title": "Version",
+            "type": "integer"
+          },
+          "available_at": {
+            "description": "必须带时区；内部规范为UTC；拒绝naive时间",
+            "format": "date-time",
+            "title": "Available At",
+            "type": "string"
+          },
+          "research_available_at": {
+            "anyOf": [
+              {
+                "description": "必须带时区；内部规范为UTC；拒绝naive时间",
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Research Available At"
+          }
+        },
+        "required": [
+          "object_id",
+          "version",
+          "available_at"
+        ],
+        "title": "InputVersionRef",
+        "type": "object"
+      },
+      "PublicPIT": {
+        "additionalProperties": false,
+        "properties": {
+          "public_available_at": {
+            "description": "必须带时区；内部规范为UTC；拒绝naive时间",
+            "format": "date-time",
+            "title": "Public Available At",
+            "type": "string"
+          },
+          "research_available_at": {
+            "description": "必须带时区；内部规范为UTC；拒绝naive时间",
+            "format": "date-time",
+            "title": "Research Available At",
+            "type": "string"
+          },
+          "availability_proof": {
+            "description": "不可变历史版本及公开时间的证据定位；不是主观推测",
+            "minLength": 1,
+            "pattern": "\\S",
+            "title": "Availability Proof",
+            "type": "string"
+          },
+          "simulated_latency_seconds": {
+            "minimum": 0,
+            "title": "Simulated Latency Seconds",
+            "type": "number"
+          }
+        },
+        "required": [
+          "public_available_at",
+          "research_available_at",
+          "availability_proof",
+          "simulated_latency_seconds"
+        ],
+        "title": "PublicPIT",
+        "type": "object"
+      },
+      "VersionRef": {
+        "additionalProperties": false,
+        "properties": {
+          "object_id": {
+            "description": "引用的稳定对象ID；不得使用动态latest",
+            "minLength": 1,
+            "pattern": "\\S",
+            "title": "Object Id",
+            "type": "string"
+          },
+          "version": {
+            "description": "引用的具体正整数版本",
+            "exclusiveMinimum": 0,
+            "title": "Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "object_id",
+          "version"
+        ],
+        "title": "VersionRef",
+        "type": "object"
+      }
+    },
+    "additionalProperties": false,
+    "properties": {
+      "object_id": {
+        "description": "非空文本，保留原值",
+        "minLength": 1,
+        "pattern": "\\S",
+        "title": "Object Id",
+        "type": "string"
+      },
+      "version": {
+        "exclusiveMinimum": 0,
+        "title": "Version",
+        "type": "integer"
+      },
+      "schema_version": {
+        "const": "X_EVENT_V0.1",
+        "default": "X_EVENT_V0.1",
+        "title": "Schema Version",
+        "type": "string"
+      },
+      "recorded_at": {
+        "description": "该版本成功耐久化提交完成时间；Phase1仅校验fixture声明",
+        "format": "date-time",
+        "title": "Recorded At",
+        "type": "string"
+      },
+      "available_at": {
+        "description": "正式研究可用时间，不早于提交及输入门槛",
+        "format": "date-time",
+        "title": "Available At",
+        "type": "string"
+      },
+      "effective_from": {
+        "anyOf": [
+          {
+            "description": "必须带时区；内部规范为UTC；拒绝naive时间",
+            "format": "date-time",
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Effective From"
+      },
+      "effective_to": {
+        "anyOf": [
+          {
+            "description": "必须带时区；内部规范为UTC；拒绝naive时间",
+            "format": "date-time",
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Effective To"
+      },
+      "supersedes_version": {
+        "anyOf": [
+          {
+            "exclusiveMinimum": 0,
+            "type": "integer"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Supersedes Version"
+      },
+      "evidence_refs": {
+        "default": [],
+        "items": {
+          "$ref": "#/$defs/VersionRef"
+        },
+        "title": "Evidence Refs",
+        "type": "array"
+      },
+      "input_version_refs": {
+        "default": [],
+        "items": {
+          "$ref": "#/$defs/InputVersionRef"
+        },
+        "title": "Input Version Refs",
+        "type": "array"
+      },
+      "run_id": {
+        "description": "非空文本，保留原值",
+        "minLength": 1,
+        "pattern": "\\S",
+        "title": "Run Id",
+        "type": "string"
+      },
+      "policy_version": {
+        "description": "非空文本，保留原值",
+        "minLength": 1,
+        "pattern": "\\S",
+        "title": "Policy Version",
+        "type": "string"
+      },
+      "status": {
+        "default": "READY",
+        "enum": [
+          "READY",
+          "DEGRADED",
+          "HOLD",
+          "QUARANTINED"
+        ],
+        "title": "Status",
+        "type": "string"
+      },
+      "reason_codes": {
+        "default": [],
+        "items": {
+          "description": "非空文本，保留原值",
+          "minLength": 1,
+          "pattern": "\\S",
+          "type": "string"
+        },
+        "title": "Reason Codes",
+        "type": "array"
+      },
+      "content_hash": {
+        "description": "SHA-256十六进制摘要；不代表内容真实",
+        "pattern": "^[0-9a-f]{64}$",
+        "title": "Content Hash",
+        "type": "string"
+      },
+      "mode": {
+        "default": "LIVE_FORWARD",
+        "enum": [
+          "LIVE_FORWARD",
+          "OBSERVED_REPLAY",
+          "PUBLIC_PIT_RESEARCH"
+        ],
+        "title": "Mode",
+        "type": "string"
+      },
+      "public_pit": {
+        "anyOf": [
+          {
+            "$ref": "#/$defs/PublicPIT"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null
+      },
+      "computed_at": {
+        "description": "派生结果实际完成时间；不能用研究开始时间替代",
+        "format": "date-time",
+        "title": "Computed At",
+        "type": "string"
+      },
+      "research_computed_at": {
+        "anyOf": [
+          {
+            "description": "必须带时区；内部规范为UTC；拒绝naive时间",
+            "format": "date-time",
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Research Computed At"
+      },
+      "actor_id": {
+        "anyOf": [
+          {
+            "description": "非空文本，保留原值",
+            "minLength": 1,
+            "pattern": "\\S",
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Actor Id"
+      },
+      "actor_ref": {
+        "anyOf": [
+          {
+            "$ref": "#/$defs/VersionRef"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null
+      },
+      "source_id": {
+        "description": "非空文本，保留原值",
+        "minLength": 1,
+        "pattern": "\\S",
+        "title": "Source Id",
+        "type": "string"
+      },
+      "source_ref": {
+        "$ref": "#/$defs/VersionRef"
+      },
+      "topic_id": {
+        "description": "非空文本，保留原值",
+        "minLength": 1,
+        "pattern": "\\S",
+        "title": "Topic Id",
+        "type": "string"
+      },
+      "statement_type": {
+        "enum": [
+          "LEGAL_DOCUMENT",
+          "POLICY_NOTICE",
+          "PRESS_CONFERENCE",
+          "SPEECH",
+          "HEARING",
+          "INTERVIEW",
+          "INFORMAL_QA",
+          "SOCIAL_ORIGINAL",
+          "REPOST",
+          "LIKE",
+          "ANONYMOUS_REPORT",
+          "UNKNOWN",
+          "OTHER"
+        ],
+        "title": "Statement Type",
+        "type": "string"
+      },
+      "raw_type": {
+        "anyOf": [
+          {
+            "description": "非空文本，保留原值",
+            "minLength": 1,
+            "pattern": "\\S",
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Raw Type"
+      },
+      "classification_missing_reason": {
+        "anyOf": [
+          {
+            "description": "非空文本，保留原值",
+            "minLength": 1,
+            "pattern": "\\S",
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Classification Missing Reason"
+      },
+      "claim_kind": {
+        "enum": [
+          "FACT",
+          "INTENT",
+          "FORECAST",
+          "OPINION",
+          "RUMOR",
+          "NARRATIVE"
+        ],
+        "title": "Claim Kind",
+        "type": "string"
+      },
+      "policy_certainty": {
+        "default": "UNKNOWN",
+        "enum": [
+          "LOW",
+          "MEDIUM",
+          "HIGH",
+          "IMPLEMENTED",
+          "UNKNOWN"
+        ],
+        "title": "Policy Certainty",
+        "type": "string"
+      },
+      "market_shock_potential": {
+        "default": "UNKNOWN",
+        "enum": [
+          "VERY_LOW",
+          "LOW",
+          "MEDIUM",
+          "HIGH",
+          "VERY_HIGH",
+          "UNKNOWN"
+        ],
+        "title": "Market Shock Potential",
+        "type": "string"
+      },
+      "evidence_ref": {
+        "$ref": "#/$defs/VersionRef"
+      }
+    },
+    "required": [
+      "object_id",
+      "version",
+      "recorded_at",
+      "available_at",
+      "run_id",
+      "policy_version",
+      "content_hash",
+      "computed_at",
+      "source_id",
+      "source_ref",
+      "topic_id",
+      "statement_type",
+      "claim_kind",
+      "evidence_ref"
+    ],
+    "title": "Statement",
+    "type": "object"
+  },
+  "EvidenceVersion": {
+    "$defs": {
+      "InputVersionRef": {
+        "additionalProperties": false,
+        "properties": {
+          "object_id": {
+            "description": "引用的稳定对象ID；不得使用动态latest",
+            "minLength": 1,
+            "pattern": "\\S",
+            "title": "Object Id",
+            "type": "string"
+          },
+          "version": {
+            "description": "引用的具体正整数版本",
+            "exclusiveMinimum": 0,
+            "title": "Version",
+            "type": "integer"
+          },
+          "available_at": {
+            "description": "必须带时区；内部规范为UTC；拒绝naive时间",
+            "format": "date-time",
+            "title": "Available At",
+            "type": "string"
+          },
+          "research_available_at": {
+            "anyOf": [
+              {
+                "description": "必须带时区；内部规范为UTC；拒绝naive时间",
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Research Available At"
+          }
+        },
+        "required": [
+          "object_id",
+          "version",
+          "available_at"
+        ],
+        "title": "InputVersionRef",
+        "type": "object"
+      },
+      "PublicPIT": {
+        "additionalProperties": false,
+        "properties": {
+          "public_available_at": {
+            "description": "必须带时区；内部规范为UTC；拒绝naive时间",
+            "format": "date-time",
+            "title": "Public Available At",
+            "type": "string"
+          },
+          "research_available_at": {
+            "description": "必须带时区；内部规范为UTC；拒绝naive时间",
+            "format": "date-time",
+            "title": "Research Available At",
+            "type": "string"
+          },
+          "availability_proof": {
+            "description": "不可变历史版本及公开时间的证据定位；不是主观推测",
+            "minLength": 1,
+            "pattern": "\\S",
+            "title": "Availability Proof",
+            "type": "string"
+          },
+          "simulated_latency_seconds": {
+            "minimum": 0,
+            "title": "Simulated Latency Seconds",
+            "type": "number"
+          }
+        },
+        "required": [
+          "public_available_at",
+          "research_available_at",
+          "availability_proof",
+          "simulated_latency_seconds"
+        ],
+        "title": "PublicPIT",
+        "type": "object"
+      },
+      "VersionRef": {
+        "additionalProperties": false,
+        "properties": {
+          "object_id": {
+            "description": "引用的稳定对象ID；不得使用动态latest",
+            "minLength": 1,
+            "pattern": "\\S",
+            "title": "Object Id",
+            "type": "string"
+          },
+          "version": {
+            "description": "引用的具体正整数版本",
+            "exclusiveMinimum": 0,
+            "title": "Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "object_id",
+          "version"
+        ],
+        "title": "VersionRef",
+        "type": "object"
+      }
+    },
+    "additionalProperties": false,
+    "properties": {
+      "object_id": {
+        "description": "非空文本，保留原值",
+        "minLength": 1,
+        "pattern": "\\S",
+        "title": "Object Id",
+        "type": "string"
+      },
+      "version": {
+        "exclusiveMinimum": 0,
+        "title": "Version",
+        "type": "integer"
+      },
+      "schema_version": {
+        "const": "X_EVENT_V0.1",
+        "default": "X_EVENT_V0.1",
+        "title": "Schema Version",
+        "type": "string"
+      },
+      "recorded_at": {
+        "description": "该版本成功耐久化提交完成时间；Phase1仅校验fixture声明",
+        "format": "date-time",
+        "title": "Recorded At",
+        "type": "string"
+      },
+      "available_at": {
+        "description": "正式研究可用时间，不早于提交及输入门槛",
+        "format": "date-time",
+        "title": "Available At",
+        "type": "string"
+      },
+      "effective_from": {
+        "anyOf": [
+          {
+            "description": "必须带时区；内部规范为UTC；拒绝naive时间",
+            "format": "date-time",
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Effective From"
+      },
+      "effective_to": {
+        "anyOf": [
+          {
+            "description": "必须带时区；内部规范为UTC；拒绝naive时间",
+            "format": "date-time",
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Effective To"
+      },
+      "supersedes_version": {
+        "anyOf": [
+          {
+            "exclusiveMinimum": 0,
+            "type": "integer"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Supersedes Version"
+      },
+      "evidence_refs": {
+        "default": [],
+        "items": {
+          "$ref": "#/$defs/VersionRef"
+        },
+        "title": "Evidence Refs",
+        "type": "array"
+      },
+      "input_version_refs": {
+        "default": [],
+        "items": {
+          "$ref": "#/$defs/InputVersionRef"
+        },
+        "title": "Input Version Refs",
+        "type": "array"
+      },
+      "run_id": {
+        "description": "非空文本，保留原值",
+        "minLength": 1,
+        "pattern": "\\S",
+        "title": "Run Id",
+        "type": "string"
+      },
+      "policy_version": {
+        "description": "非空文本，保留原值",
+        "minLength": 1,
+        "pattern": "\\S",
+        "title": "Policy Version",
+        "type": "string"
+      },
+      "status": {
+        "default": "READY",
+        "enum": [
+          "READY",
+          "DEGRADED",
+          "HOLD",
+          "QUARANTINED"
+        ],
+        "title": "Status",
+        "type": "string"
+      },
+      "reason_codes": {
+        "default": [],
+        "items": {
+          "description": "非空文本，保留原值",
+          "minLength": 1,
+          "pattern": "\\S",
+          "type": "string"
+        },
+        "title": "Reason Codes",
+        "type": "array"
+      },
+      "content_hash": {
+        "description": "SHA-256十六进制摘要；不代表内容真实",
+        "pattern": "^[0-9a-f]{64}$",
+        "title": "Content Hash",
+        "type": "string"
+      },
+      "mode": {
+        "default": "LIVE_FORWARD",
+        "enum": [
+          "LIVE_FORWARD",
+          "OBSERVED_REPLAY",
+          "PUBLIC_PIT_RESEARCH"
+        ],
+        "title": "Mode",
+        "type": "string"
+      },
+      "public_pit": {
+        "anyOf": [
+          {
+            "$ref": "#/$defs/PublicPIT"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null
+      },
+      "evidence_id": {
+        "description": "非空文本，保留原值",
+        "minLength": 1,
+        "pattern": "\\S",
+        "title": "Evidence Id",
+        "type": "string"
+      },
+      "source_id": {
+        "description": "非空文本，保留原值",
+        "minLength": 1,
+        "pattern": "\\S",
+        "title": "Source Id",
+        "type": "string"
+      },
+      "source_ref": {
+        "$ref": "#/$defs/VersionRef"
+      },
+      "canonical_url_or_locator": {
+        "description": "非空文本，保留原值",
+        "minLength": 1,
+        "pattern": "\\S",
+        "title": "Canonical Url Or Locator",
+        "type": "string"
+      },
+      "original_language": {
+        "description": "非空文本，保留原值",
+        "minLength": 1,
+        "pattern": "\\S",
+        "title": "Original Language",
+        "type": "string"
+      },
+      "raw_object_ref": {
+        "description": "非空文本，保留原值",
+        "minLength": 1,
+        "pattern": "\\S",
+        "title": "Raw Object Ref",
+        "type": "string"
+      },
+      "raw_content_hash": {
+        "description": "SHA-256十六进制摘要；不代表内容真实",
+        "pattern": "^[0-9a-f]{64}$",
+        "title": "Raw Content Hash",
+        "type": "string"
+      },
+      "first_seen_text_ref": {
+        "description": "非空文本，保留原值",
+        "minLength": 1,
+        "pattern": "\\S",
+        "title": "First Seen Text Ref",
+        "type": "string"
+      },
+      "origin_cluster_id": {
+        "description": "非空文本，保留原值",
+        "minLength": 1,
+        "pattern": "\\S",
+        "title": "Origin Cluster Id",
+        "type": "string"
+      },
+      "is_first_hand": {
+        "anyOf": [
+          {
+            "type": "boolean"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "description": "null表示未查明；不是默认一手",
+        "title": "Is First Hand"
+      },
+      "independence_status": {
+        "enum": [
+          "INDEPENDENT",
+          "SAME_ORIGIN",
+          "UNKNOWN"
+        ],
+        "title": "Independence Status",
+        "type": "string"
+      },
+      "claim_kind": {
+        "enum": [
+          "FACT",
+          "INTENT",
+          "FORECAST",
+          "OPINION",
+          "RUMOR",
+          "NARRATIVE"
+        ],
+        "title": "Claim Kind",
+        "type": "string"
+      },
+      "published_at": {
+        "anyOf": [
+          {
+            "description": "必须带时区；内部规范为UTC；拒绝naive时间",
+            "format": "date-time",
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "title": "Published At"
+      },
+      "public_available_at": {
+        "anyOf": [
+          {
+            "description": "必须带时区；内部规范为UTC；拒绝naive时间",
+            "format": "date-time",
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "title": "Public Available At"
+      },
+      "first_seen_at": {
+        "description": "必须带时区；内部规范为UTC；拒绝naive时间",
+        "format": "date-time",
+        "title": "First Seen At",
+        "type": "string"
+      },
+      "collected_at": {
+        "description": "必须带时区；内部规范为UTC；拒绝naive时间",
+        "format": "date-time",
+        "title": "Collected At",
+        "type": "string"
+      },
+      "ready_at": {
+        "description": "解析、规范化与必需校验完成时间，不是提交完成时间",
+        "format": "date-time",
+        "title": "Ready At",
+        "type": "string"
+      },
+      "evidence_type": {
+        "enum": [
+          "OFFICIAL_DOCUMENT",
+          "COMPANY_DISCLOSURE",
+          "NEWS_REPORT",
+          "SOCIAL_POST",
+          "TRANSCRIPT",
+          "UNKNOWN",
+          "OTHER"
+        ],
+        "title": "Evidence Type",
+        "type": "string"
+      },
+      "raw_type": {
+        "anyOf": [
+          {
+            "description": "非空文本，保留原值",
+            "minLength": 1,
+            "pattern": "\\S",
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Raw Type"
+      },
+      "classification_missing_reason": {
+        "anyOf": [
+          {
+            "description": "非空文本，保留原值",
+            "minLength": 1,
+            "pattern": "\\S",
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Classification Missing Reason"
+      },
+      "quality_status": {
+        "enum": [
+          "VALIDATED",
+          "PARTIAL",
+          "UNVERIFIED",
+          "REJECTED"
+        ],
+        "title": "Quality Status",
+        "type": "string"
+      }
+    },
+    "required": [
+      "object_id",
+      "version",
+      "recorded_at",
+      "available_at",
+      "run_id",
+      "policy_version",
+      "content_hash",
+      "evidence_id",
+      "source_id",
+      "source_ref",
+      "canonical_url_or_locator",
+      "original_language",
+      "raw_object_ref",
+      "raw_content_hash",
+      "first_seen_text_ref",
+      "origin_cluster_id",
+      "is_first_hand",
+      "independence_status",
+      "claim_kind",
+      "published_at",
+      "public_available_at",
+      "first_seen_at",
+      "collected_at",
+      "ready_at",
+      "evidence_type",
+      "quality_status"
+    ],
+    "title": "EvidenceVersion",
+    "type": "object"
+  },
+  "EvidenceRelation": {
+    "$defs": {
+      "InputVersionRef": {
+        "additionalProperties": false,
+        "properties": {
+          "object_id": {
+            "description": "引用的稳定对象ID；不得使用动态latest",
+            "minLength": 1,
+            "pattern": "\\S",
+            "title": "Object Id",
+            "type": "string"
+          },
+          "version": {
+            "description": "引用的具体正整数版本",
+            "exclusiveMinimum": 0,
+            "title": "Version",
+            "type": "integer"
+          },
+          "available_at": {
+            "description": "必须带时区；内部规范为UTC；拒绝naive时间",
+            "format": "date-time",
+            "title": "Available At",
+            "type": "string"
+          },
+          "research_available_at": {
+            "anyOf": [
+              {
+                "description": "必须带时区；内部规范为UTC；拒绝naive时间",
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Research Available At"
+          }
+        },
+        "required": [
+          "object_id",
+          "version",
+          "available_at"
+        ],
+        "title": "InputVersionRef",
+        "type": "object"
+      },
+      "PublicPIT": {
+        "additionalProperties": false,
+        "properties": {
+          "public_available_at": {
+            "description": "必须带时区；内部规范为UTC；拒绝naive时间",
+            "format": "date-time",
+            "title": "Public Available At",
+            "type": "string"
+          },
+          "research_available_at": {
+            "description": "必须带时区；内部规范为UTC；拒绝naive时间",
+            "format": "date-time",
+            "title": "Research Available At",
+            "type": "string"
+          },
+          "availability_proof": {
+            "description": "不可变历史版本及公开时间的证据定位；不是主观推测",
+            "minLength": 1,
+            "pattern": "\\S",
+            "title": "Availability Proof",
+            "type": "string"
+          },
+          "simulated_latency_seconds": {
+            "minimum": 0,
+            "title": "Simulated Latency Seconds",
+            "type": "number"
+          }
+        },
+        "required": [
+          "public_available_at",
+          "research_available_at",
+          "availability_proof",
+          "simulated_latency_seconds"
+        ],
+        "title": "PublicPIT",
+        "type": "object"
+      },
+      "VersionRef": {
+        "additionalProperties": false,
+        "properties": {
+          "object_id": {
+            "description": "引用的稳定对象ID；不得使用动态latest",
+            "minLength": 1,
+            "pattern": "\\S",
+            "title": "Object Id",
+            "type": "string"
+          },
+          "version": {
+            "description": "引用的具体正整数版本",
+            "exclusiveMinimum": 0,
+            "title": "Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "object_id",
+          "version"
+        ],
+        "title": "VersionRef",
+        "type": "object"
+      }
+    },
+    "additionalProperties": false,
+    "properties": {
+      "object_id": {
+        "description": "非空文本，保留原值",
+        "minLength": 1,
+        "pattern": "\\S",
+        "title": "Object Id",
+        "type": "string"
+      },
+      "version": {
+        "exclusiveMinimum": 0,
+        "title": "Version",
+        "type": "integer"
+      },
+      "schema_version": {
+        "const": "X_EVENT_V0.1",
+        "default": "X_EVENT_V0.1",
+        "title": "Schema Version",
+        "type": "string"
+      },
+      "recorded_at": {
+        "description": "该版本成功耐久化提交完成时间；Phase1仅校验fixture声明",
+        "format": "date-time",
+        "title": "Recorded At",
+        "type": "string"
+      },
+      "available_at": {
+        "description": "正式研究可用时间，不早于提交及输入门槛",
+        "format": "date-time",
+        "title": "Available At",
+        "type": "string"
+      },
+      "effective_from": {
+        "anyOf": [
+          {
+            "description": "必须带时区；内部规范为UTC；拒绝naive时间",
+            "format": "date-time",
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Effective From"
+      },
+      "effective_to": {
+        "anyOf": [
+          {
+            "description": "必须带时区；内部规范为UTC；拒绝naive时间",
+            "format": "date-time",
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Effective To"
+      },
+      "supersedes_version": {
+        "anyOf": [
+          {
+            "exclusiveMinimum": 0,
+            "type": "integer"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Supersedes Version"
+      },
+      "evidence_refs": {
+        "default": [],
+        "items": {
+          "$ref": "#/$defs/VersionRef"
+        },
+        "title": "Evidence Refs",
+        "type": "array"
+      },
+      "input_version_refs": {
+        "default": [],
+        "items": {
+          "$ref": "#/$defs/InputVersionRef"
+        },
+        "title": "Input Version Refs",
+        "type": "array"
+      },
+      "run_id": {
+        "description": "非空文本，保留原值",
+        "minLength": 1,
+        "pattern": "\\S",
+        "title": "Run Id",
+        "type": "string"
+      },
+      "policy_version": {
+        "description": "非空文本，保留原值",
+        "minLength": 1,
+        "pattern": "\\S",
+        "title": "Policy Version",
+        "type": "string"
+      },
+      "status": {
+        "default": "READY",
+        "enum": [
+          "READY",
+          "DEGRADED",
+          "HOLD",
+          "QUARANTINED"
+        ],
+        "title": "Status",
+        "type": "string"
+      },
+      "reason_codes": {
+        "default": [],
+        "items": {
+          "description": "非空文本，保留原值",
+          "minLength": 1,
+          "pattern": "\\S",
+          "type": "string"
+        },
+        "title": "Reason Codes",
+        "type": "array"
+      },
+      "content_hash": {
+        "description": "SHA-256十六进制摘要；不代表内容真实",
+        "pattern": "^[0-9a-f]{64}$",
+        "title": "Content Hash",
+        "type": "string"
+      },
+      "mode": {
+        "default": "LIVE_FORWARD",
+        "enum": [
+          "LIVE_FORWARD",
+          "OBSERVED_REPLAY",
+          "PUBLIC_PIT_RESEARCH"
+        ],
+        "title": "Mode",
+        "type": "string"
+      },
+      "public_pit": {
+        "anyOf": [
+          {
+            "$ref": "#/$defs/PublicPIT"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null
+      },
+      "computed_at": {
+        "description": "派生结果实际完成时间；不能用研究开始时间替代",
+        "format": "date-time",
+        "title": "Computed At",
+        "type": "string"
+      },
+      "research_computed_at": {
+        "anyOf": [
+          {
+            "description": "必须带时区；内部规范为UTC；拒绝naive时间",
+            "format": "date-time",
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Research Computed At"
+      },
+      "subject_ref": {
+        "$ref": "#/$defs/VersionRef"
+      },
+      "evidence_ref": {
+        "$ref": "#/$defs/VersionRef"
+      },
+      "relation": {
+        "enum": [
+          "SUPPORTS",
+          "CONTRADICTS",
+          "CONTEXT"
+        ],
+        "title": "Relation",
+        "type": "string"
+      },
+      "quoted_span": {
+        "description": "非空文本，保留原值",
+        "minLength": 1,
+        "pattern": "\\S",
+        "title": "Quoted Span",
+        "type": "string"
+      },
+      "interpretation_zh": {
+        "description": "非空文本，保留原值",
+        "minLength": 1,
+        "pattern": "\\S",
+        "title": "Interpretation Zh",
+        "type": "string"
+      }
+    },
+    "required": [
+      "object_id",
+      "version",
+      "recorded_at",
+      "available_at",
+      "run_id",
+      "policy_version",
+      "content_hash",
+      "computed_at",
+      "subject_ref",
+      "evidence_ref",
+      "relation",
+      "quoted_span",
+      "interpretation_zh"
+    ],
+    "title": "EvidenceRelation",
+    "type": "object"
+  },
+  "EventVersion": {
+    "$defs": {
+      "EntityRef": {
+        "additionalProperties": false,
+        "properties": {
+          "entity_id": {
+            "description": "非空文本，保留原值",
+            "minLength": 1,
+            "pattern": "\\S",
+            "title": "Entity Id",
+            "type": "string"
+          },
+          "entity_type": {
+            "enum": [
+              "PERSON",
+              "INSTITUTION",
+              "OBJECT",
+              "REGION",
+              "UNRESOLVED"
+            ],
+            "title": "Entity Type",
+            "type": "string"
+          },
+          "name_zh": {
+            "description": "非空文本，保留原值",
+            "minLength": 1,
+            "pattern": "\\S",
+            "title": "Name Zh",
+            "type": "string"
+          }
+        },
+        "required": [
+          "entity_id",
+          "entity_type",
+          "name_zh"
+        ],
+        "title": "EntityRef",
+        "type": "object"
+      },
+      "EventDNA": {
+        "additionalProperties": false,
+        "properties": {
+          "actor_refs": {
+            "items": {
+              "$ref": "#/$defs/VersionRef"
+            },
+            "title": "Actor Refs",
+            "type": "array"
+          },
+          "action_code": {
+            "description": "非空文本，保留原值",
+            "minLength": 1,
+            "pattern": "\\S",
+            "title": "Action Code",
+            "type": "string"
+          },
+          "object_entities": {
+            "description": "经济/政策等事件客体；不是股票或概念标签",
+            "items": {
+              "$ref": "#/$defs/EntityRef"
+            },
+            "minItems": 1,
+            "title": "Object Entities",
+            "type": "array"
+          },
+          "target_entities": {
+            "default": [],
+            "items": {
+              "$ref": "#/$defs/EntityRef"
+            },
+            "title": "Target Entities",
+            "type": "array"
+          },
+          "domain_ids": {
+            "items": {
+              "description": "非空文本，保留原值",
+              "minLength": 1,
+              "pattern": "\\S",
+              "type": "string"
+            },
+            "title": "Domain Ids",
+            "type": "array"
+          },
+          "geographic_scope": {
+            "items": {
+              "description": "非空文本，保留原值",
+              "minLength": 1,
+              "pattern": "\\S",
+              "type": "string"
+            },
+            "title": "Geographic Scope",
+            "type": "array"
+          },
+          "temporal_scope": {
+            "description": "非空文本，保留原值",
+            "minLength": 1,
+            "pattern": "\\S",
+            "title": "Temporal Scope",
+            "type": "string"
+          },
+          "identity_rule_version": {
+            "description": "非空文本，保留原值",
+            "minLength": 1,
+            "pattern": "\\S",
+            "title": "Identity Rule Version",
+            "type": "string"
+          }
+        },
+        "required": [
+          "actor_refs",
+          "action_code",
+          "object_entities",
+          "domain_ids",
+          "geographic_scope",
+          "temporal_scope",
+          "identity_rule_version"
+        ],
+        "title": "EventDNA",
+        "type": "object"
+      },
+      "InputVersionRef": {
+        "additionalProperties": false,
+        "properties": {
+          "object_id": {
+            "description": "引用的稳定对象ID；不得使用动态latest",
+            "minLength": 1,
+            "pattern": "\\S",
+            "title": "Object Id",
+            "type": "string"
+          },
+          "version": {
+            "description": "引用的具体正整数版本",
+            "exclusiveMinimum": 0,
+            "title": "Version",
+            "type": "integer"
+          },
+          "available_at": {
+            "description": "必须带时区；内部规范为UTC；拒绝naive时间",
+            "format": "date-time",
+            "title": "Available At",
+            "type": "string"
+          },
+          "research_available_at": {
+            "anyOf": [
+              {
+                "description": "必须带时区；内部规范为UTC；拒绝naive时间",
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Research Available At"
+          }
+        },
+        "required": [
+          "object_id",
+          "version",
+          "available_at"
+        ],
+        "title": "InputVersionRef",
+        "type": "object"
+      },
+      "PublicPIT": {
+        "additionalProperties": false,
+        "properties": {
+          "public_available_at": {
+            "description": "必须带时区；内部规范为UTC；拒绝naive时间",
+            "format": "date-time",
+            "title": "Public Available At",
+            "type": "string"
+          },
+          "research_available_at": {
+            "description": "必须带时区；内部规范为UTC；拒绝naive时间",
+            "format": "date-time",
+            "title": "Research Available At",
+            "type": "string"
+          },
+          "availability_proof": {
+            "description": "不可变历史版本及公开时间的证据定位；不是主观推测",
+            "minLength": 1,
+            "pattern": "\\S",
+            "title": "Availability Proof",
+            "type": "string"
+          },
+          "simulated_latency_seconds": {
+            "minimum": 0,
+            "title": "Simulated Latency Seconds",
+            "type": "number"
+          }
+        },
+        "required": [
+          "public_available_at",
+          "research_available_at",
+          "availability_proof",
+          "simulated_latency_seconds"
+        ],
+        "title": "PublicPIT",
+        "type": "object"
+      },
+      "VersionRef": {
+        "additionalProperties": false,
+        "properties": {
+          "object_id": {
+            "description": "引用的稳定对象ID；不得使用动态latest",
+            "minLength": 1,
+            "pattern": "\\S",
+            "title": "Object Id",
+            "type": "string"
+          },
+          "version": {
+            "description": "引用的具体正整数版本",
+            "exclusiveMinimum": 0,
+            "title": "Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "object_id",
+          "version"
+        ],
+        "title": "VersionRef",
+        "type": "object"
+      }
+    },
+    "additionalProperties": false,
+    "properties": {
+      "object_id": {
+        "description": "非空文本，保留原值",
+        "minLength": 1,
+        "pattern": "\\S",
+        "title": "Object Id",
+        "type": "string"
+      },
+      "version": {
+        "exclusiveMinimum": 0,
+        "title": "Version",
+        "type": "integer"
+      },
+      "schema_version": {
+        "const": "X_EVENT_V0.1",
+        "default": "X_EVENT_V0.1",
+        "title": "Schema Version",
+        "type": "string"
+      },
+      "recorded_at": {
+        "description": "该版本成功耐久化提交完成时间；Phase1仅校验fixture声明",
+        "format": "date-time",
+        "title": "Recorded At",
+        "type": "string"
+      },
+      "available_at": {
+        "description": "正式研究可用时间，不早于提交及输入门槛",
+        "format": "date-time",
+        "title": "Available At",
+        "type": "string"
+      },
+      "effective_from": {
+        "anyOf": [
+          {
+            "description": "必须带时区；内部规范为UTC；拒绝naive时间",
+            "format": "date-time",
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Effective From"
+      },
+      "effective_to": {
+        "anyOf": [
+          {
+            "description": "必须带时区；内部规范为UTC；拒绝naive时间",
+            "format": "date-time",
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Effective To"
+      },
+      "supersedes_version": {
+        "anyOf": [
+          {
+            "exclusiveMinimum": 0,
+            "type": "integer"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Supersedes Version"
+      },
+      "evidence_refs": {
+        "default": [],
+        "items": {
+          "$ref": "#/$defs/VersionRef"
+        },
+        "title": "Evidence Refs",
+        "type": "array"
+      },
+      "input_version_refs": {
+        "default": [],
+        "items": {
+          "$ref": "#/$defs/InputVersionRef"
+        },
+        "title": "Input Version Refs",
+        "type": "array"
+      },
+      "run_id": {
+        "description": "非空文本，保留原值",
+        "minLength": 1,
+        "pattern": "\\S",
+        "title": "Run Id",
+        "type": "string"
+      },
+      "policy_version": {
+        "description": "非空文本，保留原值",
+        "minLength": 1,
+        "pattern": "\\S",
+        "title": "Policy Version",
+        "type": "string"
+      },
+      "status": {
+        "default": "READY",
+        "enum": [
+          "READY",
+          "DEGRADED",
+          "HOLD",
+          "QUARANTINED"
+        ],
+        "title": "Status",
+        "type": "string"
+      },
+      "reason_codes": {
+        "default": [],
+        "items": {
+          "description": "非空文本，保留原值",
+          "minLength": 1,
+          "pattern": "\\S",
+          "type": "string"
+        },
+        "title": "Reason Codes",
+        "type": "array"
+      },
+      "content_hash": {
+        "description": "SHA-256十六进制摘要；不代表内容真实",
+        "pattern": "^[0-9a-f]{64}$",
+        "title": "Content Hash",
+        "type": "string"
+      },
+      "mode": {
+        "default": "LIVE_FORWARD",
+        "enum": [
+          "LIVE_FORWARD",
+          "OBSERVED_REPLAY",
+          "PUBLIC_PIT_RESEARCH"
+        ],
+        "title": "Mode",
+        "type": "string"
+      },
+      "public_pit": {
+        "anyOf": [
+          {
+            "$ref": "#/$defs/PublicPIT"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null
+      },
+      "computed_at": {
+        "description": "派生结果实际完成时间；不能用研究开始时间替代",
+        "format": "date-time",
+        "title": "Computed At",
+        "type": "string"
+      },
+      "research_computed_at": {
+        "anyOf": [
+          {
+            "description": "必须带时区；内部规范为UTC；拒绝naive时间",
+            "format": "date-time",
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Research Computed At"
+      },
+      "event_id": {
+        "description": "非空文本，保留原值",
+        "minLength": 1,
+        "pattern": "\\S",
+        "title": "Event Id",
+        "type": "string"
+      },
+      "title_zh": {
+        "description": "非空文本，保留原值",
+        "minLength": 1,
+        "pattern": "\\S",
+        "title": "Title Zh",
+        "type": "string"
+      },
+      "event_type": {
+        "enum": [
+          "POLICY",
+          "CORPORATE",
+          "SUPPLY_DEMAND",
+          "MACRO",
+          "GEOPOLITICAL",
+          "TECHNOLOGY",
+          "UNKNOWN",
+          "OTHER"
+        ],
+        "title": "Event Type",
+        "type": "string"
+      },
+      "raw_type": {
+        "anyOf": [
+          {
+            "description": "非空文本，保留原值",
+            "minLength": 1,
+            "pattern": "\\S",
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Raw Type"
+      },
+      "classification_missing_reason": {
+        "anyOf": [
+          {
+            "description": "非空文本，保留原值",
+            "minLength": 1,
+            "pattern": "\\S",
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Classification Missing Reason"
+      },
+      "dna": {
+        "$ref": "#/$defs/EventDNA"
+      },
+      "first_public_at": {
+        "anyOf": [
+          {
+            "description": "必须带时区；内部规范为UTC；拒绝naive时间",
+            "format": "date-time",
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "title": "First Public At"
+      },
+      "first_seen_at": {
+        "description": "必须带时区；内部规范为UTC；拒绝naive时间",
+        "format": "date-time",
+        "title": "First Seen At",
+        "type": "string"
+      },
+      "last_material_update_at": {
+        "description": "必须带时区；内部规范为UTC；拒绝naive时间",
+        "format": "date-time",
+        "title": "Last Material Update At",
+        "type": "string"
+      },
+      "fact_state": {
+        "default": "UNVERIFIED",
+        "enum": [
+          "UNVERIFIED",
+          "PLAUSIBLE",
+          "PARTIALLY_CONFIRMED",
+          "INDEPENDENTLY_CONFIRMED",
+          "OFFICIALLY_CONFIRMED",
+          "IMPLEMENTED",
+          "CONTRADICTED",
+          "INVALIDATED"
+        ],
+        "title": "Fact State",
+        "type": "string"
+      },
+      "narrative_state": {
+        "default": "UNKNOWN",
+        "enum": [
+          "UNKNOWN",
+          "SILENT",
+          "EXPERT_DISCOVERY",
+          "EARLY_DIFFUSION",
+          "RAPID_DIFFUSION",
+          "MAINSTREAM",
+          "CROWDED",
+          "DECAYING"
+        ],
+        "title": "Narrative State",
+        "type": "string"
+      },
+      "pricing_state": {
+        "default": "UNKNOWN",
+        "enum": [
+          "UNKNOWN",
+          "NO_REACTION",
+          "INITIAL_REACTION",
+          "PARTIAL_REPRICING",
+          "SECTOR_DIFFUSION",
+          "FULLY_PRICED",
+          "OVERTRADED"
+        ],
+        "title": "Pricing State",
+        "type": "string"
+      },
+      "priority": {
+        "default": "P3",
+        "enum": [
+          "P0",
+          "P1",
+          "P2",
+          "P3"
+        ],
+        "title": "Priority",
+        "type": "string"
+      },
+      "lifecycle_status": {
+        "default": "ACTIVE",
+        "enum": [
+          "ACTIVE",
+          "ARCHIVED"
+        ],
+        "title": "Lifecycle Status",
+        "type": "string"
+      },
+      "event_cluster_ids": {
+        "default": [],
+        "items": {
+          "description": "非空文本，保留原值",
+          "minLength": 1,
+          "pattern": "\\S",
+          "type": "string"
+        },
+        "title": "Event Cluster Ids",
+        "type": "array"
+      },
+      "hypothesis_set_ref": {
+        "anyOf": [
+          {
+            "$ref": "#/$defs/VersionRef"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null
+      },
+      "revision_reason": {
+        "description": "非空文本，保留原值",
+        "minLength": 1,
+        "pattern": "\\S",
+        "title": "Revision Reason",
+        "type": "string"
+      }
+    },
+    "required": [
+      "object_id",
+      "version",
+      "recorded_at",
+      "available_at",
+      "run_id",
+      "policy_version",
+      "content_hash",
+      "computed_at",
+      "event_id",
+      "title_zh",
+      "event_type",
+      "dna",
+      "first_public_at",
+      "first_seen_at",
+      "last_material_update_at",
+      "revision_reason"
+    ],
+    "title": "EventVersion",
+    "type": "object"
+  },
+  "EventDNA": {
+    "$defs": {
+      "EntityRef": {
+        "additionalProperties": false,
+        "properties": {
+          "entity_id": {
+            "description": "非空文本，保留原值",
+            "minLength": 1,
+            "pattern": "\\S",
+            "title": "Entity Id",
+            "type": "string"
+          },
+          "entity_type": {
+            "enum": [
+              "PERSON",
+              "INSTITUTION",
+              "OBJECT",
+              "REGION",
+              "UNRESOLVED"
+            ],
+            "title": "Entity Type",
+            "type": "string"
+          },
+          "name_zh": {
+            "description": "非空文本，保留原值",
+            "minLength": 1,
+            "pattern": "\\S",
+            "title": "Name Zh",
+            "type": "string"
+          }
+        },
+        "required": [
+          "entity_id",
+          "entity_type",
+          "name_zh"
+        ],
+        "title": "EntityRef",
+        "type": "object"
+      },
+      "VersionRef": {
+        "additionalProperties": false,
+        "properties": {
+          "object_id": {
+            "description": "引用的稳定对象ID；不得使用动态latest",
+            "minLength": 1,
+            "pattern": "\\S",
+            "title": "Object Id",
+            "type": "string"
+          },
+          "version": {
+            "description": "引用的具体正整数版本",
+            "exclusiveMinimum": 0,
+            "title": "Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "object_id",
+          "version"
+        ],
+        "title": "VersionRef",
+        "type": "object"
+      }
+    },
+    "additionalProperties": false,
+    "properties": {
+      "actor_refs": {
+        "items": {
+          "$ref": "#/$defs/VersionRef"
+        },
+        "title": "Actor Refs",
+        "type": "array"
+      },
+      "action_code": {
+        "description": "非空文本，保留原值",
+        "minLength": 1,
+        "pattern": "\\S",
+        "title": "Action Code",
+        "type": "string"
+      },
+      "object_entities": {
+        "description": "经济/政策等事件客体；不是股票或概念标签",
+        "items": {
+          "$ref": "#/$defs/EntityRef"
+        },
+        "minItems": 1,
+        "title": "Object Entities",
+        "type": "array"
+      },
+      "target_entities": {
+        "default": [],
+        "items": {
+          "$ref": "#/$defs/EntityRef"
+        },
+        "title": "Target Entities",
+        "type": "array"
+      },
+      "domain_ids": {
+        "items": {
+          "description": "非空文本，保留原值",
+          "minLength": 1,
+          "pattern": "\\S",
+          "type": "string"
+        },
+        "title": "Domain Ids",
+        "type": "array"
+      },
+      "geographic_scope": {
+        "items": {
+          "description": "非空文本，保留原值",
+          "minLength": 1,
+          "pattern": "\\S",
+          "type": "string"
+        },
+        "title": "Geographic Scope",
+        "type": "array"
+      },
+      "temporal_scope": {
+        "description": "非空文本，保留原值",
+        "minLength": 1,
+        "pattern": "\\S",
+        "title": "Temporal Scope",
+        "type": "string"
+      },
+      "identity_rule_version": {
+        "description": "非空文本，保留原值",
+        "minLength": 1,
+        "pattern": "\\S",
+        "title": "Identity Rule Version",
+        "type": "string"
+      }
+    },
+    "required": [
+      "actor_refs",
+      "action_code",
+      "object_entities",
+      "domain_ids",
+      "geographic_scope",
+      "temporal_scope",
+      "identity_rule_version"
+    ],
+    "title": "EventDNA",
+    "type": "object"
+  }
+}
