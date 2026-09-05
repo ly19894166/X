@@ -47,3 +47,12 @@
 ## 6. 本轮验收口径
 
 文档 PASS 仅指文档、交叉引用、Phase 字段、远端文件内容和仅新增文档的 diff 已核验。36 项 PASS 属于已存在的 Market Engine HEAD CI，不是新事件代码测试；本轮没有重新运行市场测试，没有宣称 Event Engine 运行、PIT验证或真实 Alpha 已通过。所有 Phase 的正式实现验收仍待未来任务完成。
+
+## 7. 本轮恢复后的交付记录
+
+- 独立文档分支：`docs/x-event-engine-v0.1`；[草稿 PR #3](https://github.com/ly19894166/X/pull/3)，目标 main，仅新增本目录4份文档，未合并。
+- [总体技术规范](X_EVENT_ENGINE_TECHNICAL_SPEC_V0.1.md)统一四协议并归一化时间/状态/路径/推荐契约。
+- [开源矩阵](OPEN_SOURCE_REFERENCE_MATRIX_V0.1.md)为 FROZEN_V0.1：三个指定框架及六个小型基础组件固定到提交和许可证证据；本轮未安装/复制第三方代码。
+- [路线图](PHASE_ROADMAP_V0.1.md)包含12阶段；每阶段7个必需执行字段均齐全。
+- [总任务 #4](https://github.com/ly19894166/X/issues/4)关联 Phase 0—11 的 Issues #5—#16。Phase0文档已交付待审阅；Phase1—11未开始，没有启动后台编码任务。
+- 下一次从[Phase 1 / Issue #6](https://github.com/ly19894166/X/issues/6)继续，先读已冻结文档，不重复调查全部开源项目。

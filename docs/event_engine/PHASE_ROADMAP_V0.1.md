@@ -165,5 +165,21 @@ Phase0完成后停止；后续运行须以明确Phase任务为范围。本轮不
 
 ## GitHub实施任务索引
 
-发布时补充实际Issue链接；避免猜测编号。每个Issue包含本Phase的全部执行字段与依赖。总任务负责跟踪，不自动触发所有Phase。
+总任务：[Issue #4](https://github.com/ly19894166/X/issues/4)；文档草稿：[PR #3](https://github.com/ly19894166/X/pull/3)。
 
+| Phase | 实施Issue | 当前状态 |
+|---|---|---|
+| 0 | [#5：恢复基线、总体规范与一次性开源矩阵](https://github.com/ly19894166/X/issues/5) | 文档已交付，PR待审阅 |
+| 1 | [#6：Source / Actor / Evidence / Event 核心Schema](https://github.com/ly19894166/X/issues/6) | 未开始 |
+| 2 | [#7：Event Ledger、Origin去重、Novelty与最小采集入口](https://github.com/ly19894166/X/issues/7) | 未开始 |
+| 3 | [#8：三状态机、事件时钟及版本/合并/分裂/复活](https://github.com/ly19894166/X/issues/8) | 未开始 |
+| 4 | [#9：Impact Variable 与 X产业本体](https://github.com/ly19894166/X/issues/9) | 未开始 |
+| 5 | [#10：Company Exposure Master 与全A股Research Universe](https://github.com/ly19894166/X/issues/10) | 未开始 |
+| 6 | [#11：事件→产业→A股 Transmission Graph](https://github.com/ly19894166/X/issues/11) | 未开始 |
+| 7 | [#12：GPT结构化研究、TARGET/ALT/NULL与Red Team](https://github.com/ly19894166/X/issues/12) | 未开始 |
+| 8 | [#13：Market Recognition / Price-in / Remaining Edge](https://github.com/ly19894166/X/issues/13) | 未开始 |
+| 9 | [#14：α1/α2/β/WATCH/OVERPRICED/REJECT与独立排名](https://github.com/ly19894166/X/issues/14) | 未开始 |
+| 10 | [#15：Shadow / Forward结算与统计验证](https://github.com/ly19894166/X/issues/15) | 未开始 |
+| 11 | [#16：与X Market Engine建立可选只读接口](https://github.com/ly19894166/X/issues/16) | 未开始 |
+
+下一步最小任务：[Phase 1 / Issue #6](https://github.com/ly19894166/X/issues/6)。本轮不启动。
