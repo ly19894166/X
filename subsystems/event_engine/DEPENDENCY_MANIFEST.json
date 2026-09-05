@@ -1,0 +1,258 @@
+[
+  {
+    "name": "annotated-types",
+    "version": "0.8.0",
+    "license": "MIT",
+    "metadata_url": "https://pypi.org/pypi/annotated-types/0.8.0/json",
+    "wheels": [
+      {
+        "filename": "annotated_types-0.8.0-py3-none-any.whl",
+        "sha256": "f072f4d804ea359e4eaf198b1af7a8b0943881a87f31bb764f8bf219bb9419e0",
+        "url": "https://files.pythonhosted.org/packages/99/91/8acff4f5e50511b911bbccb72b8628a49c68ce14148cd9f6431094859a90/annotated_types-0.8.0-py3-none-any.whl"
+      }
+    ],
+    "license_files": [
+      "annotated_types-0.8.0.dist-info/licenses/LICENSE"
+    ]
+  },
+  {
+    "name": "colorama",
+    "version": "0.4.6",
+    "license": "BSD-3-Clause",
+    "metadata_url": "https://pypi.org/pypi/colorama/0.4.6/json",
+    "wheels": [
+      {
+        "filename": "colorama-0.4.6-py2.py3-none-any.whl",
+        "sha256": "4f1d9991f5acc0ca119f9d443620b77f9d6b33703e51011c16baf57afb285fc6",
+        "url": "https://files.pythonhosted.org/packages/d1/d6/3965ed04c63042e047cb6a3e6ed1a63a35087b6a609aa3a15ed8ac56c221/colorama-0.4.6-py2.py3-none-any.whl"
+      }
+    ],
+    "license_files": [
+      "colorama-0.4.6.dist-info/licenses/LICENSE.txt"
+    ],
+    "license_metadata": null,
+    "license_basis": "Installed release LICENSE.txt text"
+  },
+  {
+    "name": "iniconfig",
+    "version": "2.3.0",
+    "license": "MIT",
+    "metadata_url": "https://pypi.org/pypi/iniconfig/2.3.0/json",
+    "wheels": [
+      {
+        "filename": "iniconfig-2.3.0-py3-none-any.whl",
+        "sha256": "f631c04d2c48c52b84d0d0549c99ff3859c98df65b3101406327ecc7d53fbf12",
+        "url": "https://files.pythonhosted.org/packages/cb/b1/3846dd7f199d53cb17f49cba7e651e9ce294d8497c8c150530ed11865bb8/iniconfig-2.3.0-py3-none-any.whl"
+      }
+    ],
+    "license_files": [
+      "iniconfig-2.3.0.dist-info/licenses/LICENSE"
+    ]
+  },
+  {
+    "name": "packaging",
+    "version": "26.3",
+    "license": "Apache-2.0 OR BSD-2-Clause",
+    "metadata_url": "https://pypi.org/pypi/packaging/26.3/json",
+    "wheels": [
+      {
+        "filename": "packaging-26.3-py3-none-any.whl",
+        "sha256": "d7193f7c8e4e93f444fde0262bf90af30e16fa0ad0ad44cb553c87339b23cd1c",
+        "url": "https://files.pythonhosted.org/packages/63/34/ba1c580383c9eada3711951fef0795c80b829a078d72188184bcab9dd527/packaging-26.3-py3-none-any.whl"
+      }
+    ],
+    "license_files": [
+      "packaging-26.3.dist-info/licenses/LICENSE",
+      "packaging-26.3.dist-info/licenses/LICENSE.APACHE",
+      "packaging-26.3.dist-info/licenses/LICENSE.BSD"
+    ]
+  },
+  {
+    "name": "pluggy",
+    "version": "1.6.0",
+    "license": "MIT",
+    "metadata_url": "https://pypi.org/pypi/pluggy/1.6.0/json",
+    "wheels": [
+      {
+        "filename": "pluggy-1.6.0-py3-none-any.whl",
+        "sha256": "e920276dd6813095e9377c0bc5566d94c932c33b27a3e3945d8389c374dd4746",
+        "url": "https://files.pythonhosted.org/packages/54/20/4d324d65cc6d9205fabedc306948156824eb9f0ee1633355a8f7ec5c66bf/pluggy-1.6.0-py3-none-any.whl"
+      }
+    ],
+    "license_files": [
+      "pluggy-1.6.0.dist-info/licenses/LICENSE"
+    ]
+  },
+  {
+    "name": "pydantic",
+    "version": "2.12.5",
+    "license": "MIT",
+    "metadata_url": "https://pypi.org/pypi/pydantic/2.12.5/json",
+    "wheels": [
+      {
+        "filename": "pydantic-2.12.5-py3-none-any.whl",
+        "sha256": "e561593fccf61e8a20fc46dfc2dfe075b8be7d0188df33f221ad1f0139180f9d",
+        "url": "https://files.pythonhosted.org/packages/5a/87/b70ad306ebb6f9b585f114d0ac2137d792b48be34d732d60e597c2f8465a/pydantic-2.12.5-py3-none-any.whl"
+      }
+    ],
+    "license_files": [
+      "pydantic-2.12.5.dist-info/licenses/LICENSE"
+    ]
+  },
+  {
+    "name": "pydantic_core",
+    "version": "2.41.5",
+    "license": "MIT",
+    "metadata_url": "https://pypi.org/pypi/pydantic_core/2.41.5/json",
+    "wheels": [
+      {
+        "filename": "pydantic_core-2.41.5-cp311-cp311-manylinux_2_17_x86_64.manylinux2014_x86_64.whl",
+        "sha256": "f31d95a179f8d64d90f6831d71fa93290893a33148d890ba15de25642c5d075b",
+        "url": "https://files.pythonhosted.org/packages/c8/be/8fed28dd0a180dca19e72c233cbf58efa36df055e5b9d90d64fd1740b828/pydantic_core-2.41.5-cp311-cp311-manylinux_2_17_x86_64.manylinux2014_x86_64.whl"
+      },
+      {
+        "filename": "pydantic_core-2.41.5-cp311-cp311-win_amd64.whl",
+        "sha256": "76ee27c6e9c7f16f47db7a94157112a2f3a00e958bc626e2f4ee8bec5c328fbe",
+        "url": "https://files.pythonhosted.org/packages/11/66/f14d1d978ea94d1bc21fc98fcf570f9542fe55bfcc40269d4e1a21c19bf7/pydantic_core-2.41.5-cp311-cp311-win_amd64.whl"
+      },
+      {
+        "filename": "pydantic_core-2.41.5-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl",
+        "sha256": "eceb81a8d74f9267ef4081e246ffd6d129da5d87e37a77c9bde550cb04870c1c",
+        "url": "https://files.pythonhosted.org/packages/0d/76/941cc9f73529988688a665a5c0ecff1112b3d95ab48f81db5f7606f522d3/pydantic_core-2.41.5-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl"
+      },
+      {
+        "filename": "pydantic_core-2.41.5-cp312-cp312-win_amd64.whl",
+        "sha256": "1962293292865bca8e54702b08a4f26da73adc83dd1fcf26fbc875b35d81c815",
+        "url": "https://files.pythonhosted.org/packages/86/45/00173a033c801cacf67c190fef088789394feaf88a98a7035b0e40d53dc9/pydantic_core-2.41.5-cp312-cp312-win_amd64.whl"
+      }
+    ],
+    "license_files": [
+      "pydantic_core-2.41.5.dist-info/licenses/LICENSE"
+    ]
+  },
+  {
+    "name": "Pygments",
+    "version": "2.21.0",
+    "license": "BSD-2-Clause",
+    "metadata_url": "https://pypi.org/pypi/Pygments/2.21.0/json",
+    "wheels": [
+      {
+        "filename": "pygments-2.21.0-py3-none-any.whl",
+        "sha256": "2363c69b61c4a97c838da3b130dcd6468f4848992b21a82f2a63ec34377137d9",
+        "url": "https://files.pythonhosted.org/packages/71/46/17f022dd3e953bf20a04a028a21ec746d942f8d2af30fa0f124fa0e6a684/pygments-2.21.0-py3-none-any.whl"
+      }
+    ],
+    "license_files": [
+      "pygments-2.21.0.dist-info/licenses/LICENSE",
+      "pygments-2.21.0.dist-info/licenses/AUTHORS"
+    ]
+  },
+  {
+    "name": "pytest",
+    "version": "9.0.2",
+    "license": "MIT",
+    "metadata_url": "https://pypi.org/pypi/pytest/9.0.2/json",
+    "wheels": [
+      {
+        "filename": "pytest-9.0.2-py3-none-any.whl",
+        "sha256": "711ffd45bf766d5264d487b917733b453d917afd2b0ad65223959f59089f875b",
+        "url": "https://files.pythonhosted.org/packages/3b/ab/b3226f0bd7cdcf710fbede2b3548584366da3b19b5021e74f5bde2a8fa3f/pytest-9.0.2-py3-none-any.whl"
+      }
+    ],
+    "license_files": [
+      "pytest-9.0.2.dist-info/licenses/LICENSE"
+    ]
+  },
+  {
+    "name": "setuptools",
+    "version": "80.9.0",
+    "license": "MIT",
+    "metadata_url": "https://pypi.org/pypi/setuptools/80.9.0/json",
+    "wheels": [
+      {
+        "filename": "setuptools-80.9.0-py3-none-any.whl",
+        "sha256": "062d34222ad13e0cc312a4c02d73f059e86a4acbfbdea8f8f76b28c99f306922",
+        "url": "https://files.pythonhosted.org/packages/a3/dc/17031897dae0efacfea57dfd3a82fdd2a2aeb58e0ff71b77b87e44edc772/setuptools-80.9.0-py3-none-any.whl"
+      }
+    ],
+    "license_files": [
+      "setuptools-80.9.0.dist-info/licenses/LICENSE",
+      "setuptools/_vendor/autocommand-2.2.2.dist-info/LICENSE",
+      "setuptools/_vendor/backports.tarfile-1.2.0.dist-info/LICENSE",
+      "setuptools/_vendor/importlib_metadata-8.0.0.dist-info/LICENSE",
+      "setuptools/_vendor/inflect-7.3.1.dist-info/LICENSE",
+      "setuptools/_vendor/jaraco.collections-5.1.0.dist-info/LICENSE",
+      "setuptools/_vendor/jaraco.context-5.3.0.dist-info/LICENSE",
+      "setuptools/_vendor/jaraco.functools-4.0.1.dist-info/LICENSE",
+      "setuptools/_vendor/jaraco.text-3.12.1.dist-info/LICENSE",
+      "setuptools/_vendor/more_itertools-10.3.0.dist-info/LICENSE",
+      "setuptools/_vendor/packaging-24.2.dist-info/LICENSE",
+      "setuptools/_vendor/packaging-24.2.dist-info/LICENSE.APACHE",
+      "setuptools/_vendor/packaging-24.2.dist-info/LICENSE.BSD",
+      "setuptools/_vendor/platformdirs-4.2.2.dist-info/licenses/LICENSE",
+      "setuptools/_vendor/tomli-2.0.1.dist-info/LICENSE",
+      "setuptools/_vendor/typeguard-4.3.0.dist-info/LICENSE",
+      "setuptools/_vendor/typing_extensions-4.12.2.dist-info/LICENSE",
+      "setuptools/_vendor/wheel-0.45.1.dist-info/LICENSE.txt",
+      "setuptools/_vendor/wheel/vendored/packaging/LICENSE",
+      "setuptools/_vendor/wheel/vendored/packaging/LICENSE.APACHE",
+      "setuptools/_vendor/wheel/vendored/packaging/LICENSE.BSD",
+      "setuptools/_vendor/zipp-3.19.2.dist-info/LICENSE",
+      "setuptools/config/NOTICE",
+      "setuptools/config/_validate_pyproject/NOTICE"
+    ]
+  },
+  {
+    "name": "typing-inspection",
+    "version": "0.4.4",
+    "license": "MIT",
+    "metadata_url": "https://pypi.org/pypi/typing-inspection/0.4.4/json",
+    "wheels": [
+      {
+        "filename": "typing_inspection-0.4.4-py3-none-any.whl",
+        "sha256": "65b8397ba37ccbce054456aaccddfc91e6e3083c92824df348d96ca832f3f147",
+        "url": "https://files.pythonhosted.org/packages/67/81/4add07e5172b7ac40d8ed5ff580409a7801a4fe26d529bdd915401dabfbe/typing_inspection-0.4.4-py3-none-any.whl"
+      }
+    ],
+    "license_files": [
+      "typing_inspection-0.4.4.dist-info/licenses/LICENSE"
+    ]
+  },
+  {
+    "name": "typing_extensions",
+    "version": "4.16.0",
+    "license": "PSF-2.0",
+    "metadata_url": "https://pypi.org/pypi/typing_extensions/4.16.0/json",
+    "wheels": [
+      {
+        "filename": "typing_extensions-4.16.0-py3-none-any.whl",
+        "sha256": "481caa481374e813c1b176ada14e97f1f67a4539ce9cfeb3f350d78d6370c2e8",
+        "url": "https://files.pythonhosted.org/packages/49/d3/b8441a820a491ddfc024b0b0cf0393375b75ea13866d9c66727e54c2fc80/typing_extensions-4.16.0-py3-none-any.whl"
+      }
+    ],
+    "license_files": [
+      "typing_extensions-4.16.0.dist-info/licenses/LICENSE"
+    ]
+  },
+  {
+    "name": "wheel",
+    "version": "0.45.1",
+    "license": "MIT",
+    "metadata_url": "https://pypi.org/pypi/wheel/0.45.1/json",
+    "wheels": [
+      {
+        "filename": "wheel-0.45.1-py3-none-any.whl",
+        "sha256": "708e7481cc80179af0e556bbf0cc00b8444c7321e2700b8d8580231d13017248",
+        "url": "https://files.pythonhosted.org/packages/0b/2c/87f3254fd8ffd29e4c02732eee68a83a1d3c346ae39bc6822dcbcb697f2b/wheel-0.45.1-py3-none-any.whl"
+      }
+    ],
+    "license_files": [
+      "wheel-0.45.1.dist-info/LICENSE.txt",
+      "wheel/vendored/packaging/LICENSE",
+      "wheel/vendored/packaging/LICENSE.APACHE",
+      "wheel/vendored/packaging/LICENSE.BSD"
+    ],
+    "license_metadata": null,
+    "license_basis": "Installed release LICENSE.txt text"
+  }
+]

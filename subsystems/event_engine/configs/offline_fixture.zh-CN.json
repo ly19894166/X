@@ -1,0 +1,507 @@
+{
+  "sources": [
+    {
+      "object_id": "SRC_虚构机构",
+      "version": 1,
+      "schema_version": "X_EVENT_V0.1",
+      "recorded_at": "2026-09-06T02:00:00Z",
+      "available_at": "2026-09-06T02:00:00Z",
+      "effective_from": null,
+      "effective_to": null,
+      "supersedes_version": null,
+      "evidence_refs": [],
+      "input_version_refs": [],
+      "run_id": "FIXTURE_离线_001",
+      "policy_version": "PHASE1_V0.1",
+      "status": "READY",
+      "reason_codes": [],
+      "content_hash": "8ea94acf9e2e7f01025ab6a721a68fff104b2b7e18a9474e73b59ba69d8a214d",
+      "mode": "LIVE_FORWARD",
+      "public_pit": null,
+      "source_id": "SRC_虚构机构",
+      "name_zh": "离线虚构政策机构",
+      "platform": "OFFLINE",
+      "canonical_locator": "fixture:source",
+      "identity_status": "UNVERIFIED",
+      "tier": "S0",
+      "roles": [
+        "FACT",
+        "NARRATIVE"
+      ],
+      "access_method": "仅本地fixture",
+      "retention_policy": "仅虚构测试内容",
+      "enabled": false,
+      "terms_status": "UNKNOWN",
+      "authorization_status": "UNKNOWN",
+      "allowed_uses": null,
+      "raw_retention_allowed": null,
+      "access_restrictions": null
+    }
+  ],
+  "actors": [
+    {
+      "object_id": "ACT_虚构发言人",
+      "version": 1,
+      "schema_version": "X_EVENT_V0.1",
+      "recorded_at": "2026-09-06T02:00:00Z",
+      "available_at": "2026-09-06T02:00:00Z",
+      "effective_from": null,
+      "effective_to": null,
+      "supersedes_version": null,
+      "evidence_refs": [],
+      "input_version_refs": [
+        {
+          "object_id": "SRC_虚构机构",
+          "version": 1,
+          "available_at": "2026-09-06T02:00:00Z",
+          "research_available_at": null
+        }
+      ],
+      "run_id": "FIXTURE_离线_001",
+      "policy_version": "PHASE1_V0.1",
+      "status": "READY",
+      "reason_codes": [],
+      "content_hash": "0361b58825e6c197c1bf348b74a39389d93d05f280d238d54eca271297faa8ae",
+      "mode": "LIVE_FORWARD",
+      "public_pit": null,
+      "actor_id": "ACT_虚构发言人",
+      "name_zh": "虚构发言人",
+      "entity_type": "PERSON",
+      "organization_ref": null,
+      "role_title_zh": null,
+      "term_effective_from": null,
+      "term_effective_to": null,
+      "verified_accounts": [
+        {
+          "object_id": "SRC_虚构机构",
+          "version": 1
+        }
+      ]
+    }
+  ],
+  "evidence_versions": [
+    {
+      "object_id": "EVD_001",
+      "version": 1,
+      "schema_version": "X_EVENT_V0.1",
+      "recorded_at": "2026-09-06T02:00:05Z",
+      "available_at": "2026-09-06T02:00:05Z",
+      "effective_from": null,
+      "effective_to": null,
+      "supersedes_version": null,
+      "evidence_refs": [],
+      "input_version_refs": [
+        {
+          "object_id": "SRC_虚构机构",
+          "version": 1,
+          "available_at": "2026-09-06T02:00:00Z",
+          "research_available_at": null
+        }
+      ],
+      "run_id": "FIXTURE_离线_001",
+      "policy_version": "PHASE1_V0.1",
+      "status": "READY",
+      "reason_codes": [],
+      "content_hash": "2bb679cb07e1a89cdf7140b4b1a4237858ed430d7e38e63884b993426e43630c",
+      "mode": "LIVE_FORWARD",
+      "public_pit": null,
+      "evidence_id": "EVD_001",
+      "source_id": "SRC_虚构机构",
+      "source_ref": {
+        "object_id": "SRC_虚构机构",
+        "version": 1
+      },
+      "canonical_url_or_locator": "fixture:声明",
+      "original_language": "zh-CN",
+      "raw_object_ref": "RAW_001",
+      "raw_content_hash": "3028e15ee0543a5820f1aeaf6459058b86e1981d9b3e293d36da2eac4ef87030",
+      "first_seen_text_ref": "RAW_001",
+      "origin_cluster_id": "ORIGIN_待Phase2识别_001",
+      "is_first_hand": true,
+      "independence_status": "UNKNOWN",
+      "claim_kind": "INTENT",
+      "published_at": "2026-09-06T02:00:00Z",
+      "public_available_at": "2026-09-06T02:00:00Z",
+      "first_seen_at": "2026-09-06T02:00:01Z",
+      "collected_at": "2026-09-06T02:00:02Z",
+      "ready_at": "2026-09-06T02:00:05Z",
+      "evidence_type": "OFFICIAL_DOCUMENT",
+      "raw_type": null,
+      "classification_missing_reason": null,
+      "quality_status": "VALIDATED"
+    }
+  ],
+  "statements": [
+    {
+      "object_id": "STMT_001",
+      "version": 1,
+      "schema_version": "X_EVENT_V0.1",
+      "recorded_at": "2026-09-06T02:00:06Z",
+      "available_at": "2026-09-06T02:00:06Z",
+      "effective_from": null,
+      "effective_to": null,
+      "supersedes_version": null,
+      "evidence_refs": [],
+      "input_version_refs": [
+        {
+          "object_id": "SRC_虚构机构",
+          "version": 1,
+          "available_at": "2026-09-06T02:00:00Z",
+          "research_available_at": null
+        },
+        {
+          "object_id": "ACT_虚构发言人",
+          "version": 1,
+          "available_at": "2026-09-06T02:00:00Z",
+          "research_available_at": null
+        },
+        {
+          "object_id": "EVD_001",
+          "version": 1,
+          "available_at": "2026-09-06T02:00:05Z",
+          "research_available_at": null
+        }
+      ],
+      "run_id": "FIXTURE_离线_001",
+      "policy_version": "PHASE1_V0.1",
+      "status": "READY",
+      "reason_codes": [],
+      "content_hash": "fbd8414ba085309a1d4414dfa69e29ce72b9990ffba0ffa6698254367939eac4",
+      "mode": "LIVE_FORWARD",
+      "public_pit": null,
+      "computed_at": "2026-09-06T02:00:06Z",
+      "research_computed_at": null,
+      "actor_id": "ACT_虚构发言人",
+      "actor_ref": {
+        "object_id": "ACT_虚构发言人",
+        "version": 1
+      },
+      "source_id": "SRC_虚构机构",
+      "source_ref": {
+        "object_id": "SRC_虚构机构",
+        "version": 1
+      },
+      "topic_id": "DATACENTER_POWER",
+      "statement_type": "PRESS_CONFERENCE",
+      "raw_type": null,
+      "classification_missing_reason": null,
+      "claim_kind": "INTENT",
+      "policy_certainty": "UNKNOWN",
+      "market_shock_potential": "UNKNOWN",
+      "evidence_ref": {
+        "object_id": "EVD_001",
+        "version": 1
+      }
+    }
+  ],
+  "event_versions": [
+    {
+      "object_id": "EV_001",
+      "version": 1,
+      "schema_version": "X_EVENT_V0.1",
+      "recorded_at": "2026-09-06T02:00:08Z",
+      "available_at": "2026-09-06T02:00:08Z",
+      "effective_from": null,
+      "effective_to": null,
+      "supersedes_version": null,
+      "evidence_refs": [
+        {
+          "object_id": "EVD_001",
+          "version": 1
+        }
+      ],
+      "input_version_refs": [
+        {
+          "object_id": "ACT_虚构发言人",
+          "version": 1,
+          "available_at": "2026-09-06T02:00:00Z",
+          "research_available_at": null
+        },
+        {
+          "object_id": "EVD_001",
+          "version": 1,
+          "available_at": "2026-09-06T02:00:05Z",
+          "research_available_at": null
+        },
+        {
+          "object_id": "STMT_001",
+          "version": 1,
+          "available_at": "2026-09-06T02:00:06Z",
+          "research_available_at": null
+        }
+      ],
+      "run_id": "FIXTURE_离线_001",
+      "policy_version": "PHASE1_V0.1",
+      "status": "READY",
+      "reason_codes": [],
+      "content_hash": "4191b8592d6523e4e52703e0758b6ebdaf41c073c79cc4ccda15a0a2fb549951",
+      "mode": "LIVE_FORWARD",
+      "public_pit": null,
+      "computed_at": "2026-09-06T02:00:07Z",
+      "research_computed_at": null,
+      "event_id": "EV_001",
+      "title_zh": "虚构供电试点研究意向",
+      "event_type": "POLICY",
+      "raw_type": null,
+      "classification_missing_reason": null,
+      "dna": {
+        "actor_refs": [
+          {
+            "object_id": "ACT_虚构发言人",
+            "version": 1
+          }
+        ],
+        "action_code": "PROPOSE_PILOT",
+        "object_entities": [
+          {
+            "entity_id": "OBJ_POWER_PILOT",
+            "entity_type": "OBJECT",
+            "name_zh": "算力供电试点"
+          }
+        ],
+        "target_entities": [],
+        "domain_ids": [
+          "DATACENTER_POWER"
+        ],
+        "geographic_scope": [
+          "CN"
+        ],
+        "temporal_scope": "试点时间未定",
+        "identity_rule_version": "DNA_V0.1"
+      },
+      "first_public_at": "2026-09-06T02:00:00Z",
+      "first_seen_at": "2026-09-06T02:00:01Z",
+      "last_material_update_at": "2026-09-06T02:00:06Z",
+      "fact_state": "UNVERIFIED",
+      "narrative_state": "UNKNOWN",
+      "pricing_state": "UNKNOWN",
+      "priority": "P3",
+      "lifecycle_status": "ACTIVE",
+      "event_cluster_ids": [],
+      "hypothesis_set_ref": null,
+      "revision_reason": "首次离线契约样例"
+    }
+  ],
+  "source_topic_profiles": [
+    {
+      "object_id": "SP_001",
+      "version": 1,
+      "schema_version": "X_EVENT_V0.1",
+      "recorded_at": "2026-09-06T02:00:09Z",
+      "available_at": "2026-09-06T02:00:09Z",
+      "effective_from": null,
+      "effective_to": null,
+      "supersedes_version": null,
+      "evidence_refs": [
+        {
+          "object_id": "EVD_001",
+          "version": 1
+        }
+      ],
+      "input_version_refs": [
+        {
+          "object_id": "SRC_虚构机构",
+          "version": 1,
+          "available_at": "2026-09-06T02:00:00Z",
+          "research_available_at": null
+        },
+        {
+          "object_id": "EVD_001",
+          "version": 1,
+          "available_at": "2026-09-06T02:00:05Z",
+          "research_available_at": null
+        }
+      ],
+      "run_id": "FIXTURE_离线_001",
+      "policy_version": "PHASE1_V0.1",
+      "status": "READY",
+      "reason_codes": [],
+      "content_hash": "857119f100a9cc7a69c00ed06d6175e7aa020b9042ec8ff51f08f4cfe29e1a63",
+      "mode": "LIVE_FORWARD",
+      "public_pit": null,
+      "computed_at": "2026-09-06T02:00:09Z",
+      "research_computed_at": null,
+      "source_id": "SRC_虚构机构",
+      "source_ref": {
+        "object_id": "SRC_虚构机构",
+        "version": 1
+      },
+      "topic_id": "DATACENTER_POWER",
+      "reliability_band": "UNKNOWN",
+      "expertise_band": "UNKNOWN",
+      "influence_band": "UNKNOWN",
+      "diffusion_band": "UNKNOWN",
+      "lead_time_stats": null,
+      "missing_reason": "UNKNOWN"
+    }
+  ],
+  "narrative_source_profiles": [
+    {
+      "object_id": "NSP_001",
+      "version": 1,
+      "schema_version": "X_EVENT_V0.1",
+      "recorded_at": "2026-09-06T02:00:09Z",
+      "available_at": "2026-09-06T02:00:09Z",
+      "effective_from": null,
+      "effective_to": null,
+      "supersedes_version": null,
+      "evidence_refs": [
+        {
+          "object_id": "EVD_001",
+          "version": 1
+        }
+      ],
+      "input_version_refs": [
+        {
+          "object_id": "SRC_虚构机构",
+          "version": 1,
+          "available_at": "2026-09-06T02:00:00Z",
+          "research_available_at": null
+        },
+        {
+          "object_id": "EVD_001",
+          "version": 1,
+          "available_at": "2026-09-06T02:00:05Z",
+          "research_available_at": null
+        }
+      ],
+      "run_id": "FIXTURE_离线_001",
+      "policy_version": "PHASE1_V0.1",
+      "status": "READY",
+      "reason_codes": [],
+      "content_hash": "ff0bf5adca3859deeb5057f5f9b7fc6aac96c2643477927df64f1c11fe802e4f",
+      "mode": "LIVE_FORWARD",
+      "public_pit": null,
+      "computed_at": "2026-09-06T02:00:09Z",
+      "research_computed_at": null,
+      "source_id": "SRC_虚构机构",
+      "source_ref": {
+        "object_id": "SRC_虚构机构",
+        "version": 1
+      },
+      "topic_id": "DATACENTER_POWER",
+      "reliability_band": "UNKNOWN",
+      "expertise_band": "UNKNOWN",
+      "influence_band": "UNKNOWN",
+      "diffusion_band": "UNKNOWN",
+      "lead_time_stats": null,
+      "missing_reason": "小样本，传播与兑现统计尚未知",
+      "category": "UNKNOWN",
+      "followers": null,
+      "originality": null,
+      "citation_rate": null,
+      "leading_stats": null,
+      "following_stats": null,
+      "posthoc_stats": null,
+      "edit_stats": null,
+      "delete_stats": null,
+      "sample_n": 1,
+      "observation_window": {
+        "start": "2026-09-06T02:00:00Z",
+        "end": "2026-09-06T02:00:05Z"
+      }
+    }
+  ],
+  "actor_topic_profiles": [
+    {
+      "object_id": "AP_001",
+      "version": 1,
+      "schema_version": "X_EVENT_V0.1",
+      "recorded_at": "2026-09-06T02:00:09Z",
+      "available_at": "2026-09-06T02:00:09Z",
+      "effective_from": null,
+      "effective_to": null,
+      "supersedes_version": null,
+      "evidence_refs": [],
+      "input_version_refs": [
+        {
+          "object_id": "ACT_虚构发言人",
+          "version": 1,
+          "available_at": "2026-09-06T02:00:00Z",
+          "research_available_at": null
+        },
+        {
+          "object_id": "STMT_001",
+          "version": 1,
+          "available_at": "2026-09-06T02:00:06Z",
+          "research_available_at": null
+        }
+      ],
+      "run_id": "FIXTURE_离线_001",
+      "policy_version": "PHASE1_V0.1",
+      "status": "READY",
+      "reason_codes": [],
+      "content_hash": "c5119256b5be7aea05a34a8bbe6d2910fb1972b3096b06c74534ae1ccb179456",
+      "mode": "LIVE_FORWARD",
+      "public_pit": null,
+      "computed_at": "2026-09-06T02:00:09Z",
+      "research_computed_at": null,
+      "actor_id": "ACT_虚构发言人",
+      "actor_ref": {
+        "object_id": "ACT_虚构发言人",
+        "version": 1
+      },
+      "topic_id": "DATACENTER_POWER",
+      "policy_authority": "UNKNOWN",
+      "corporate_authority": "UNKNOWN",
+      "expertise_band": "UNKNOWN",
+      "influence_band": "UNKNOWN",
+      "statement_count": 1,
+      "realized_count": 0,
+      "partial_count": 0,
+      "denied_count": 0,
+      "unresolved_count": 1,
+      "outcome_available_at": null
+    }
+  ],
+  "evidence_relations": [
+    {
+      "object_id": "REL_001",
+      "version": 1,
+      "schema_version": "X_EVENT_V0.1",
+      "recorded_at": "2026-09-06T02:00:09Z",
+      "available_at": "2026-09-06T02:00:09Z",
+      "effective_from": null,
+      "effective_to": null,
+      "supersedes_version": null,
+      "evidence_refs": [],
+      "input_version_refs": [
+        {
+          "object_id": "EV_001",
+          "version": 1,
+          "available_at": "2026-09-06T02:00:08Z",
+          "research_available_at": null
+        },
+        {
+          "object_id": "EVD_001",
+          "version": 1,
+          "available_at": "2026-09-06T02:00:05Z",
+          "research_available_at": null
+        }
+      ],
+      "run_id": "FIXTURE_离线_001",
+      "policy_version": "PHASE1_V0.1",
+      "status": "READY",
+      "reason_codes": [],
+      "content_hash": "63ae368fd63de3ba5bf25ea2ee61e9e8a38a4662bf5d72c6a780412be9e40d0b",
+      "mode": "LIVE_FORWARD",
+      "public_pit": null,
+      "computed_at": "2026-09-06T02:00:09Z",
+      "research_computed_at": null,
+      "subject_ref": {
+        "object_id": "EV_001",
+        "version": 1
+      },
+      "evidence_ref": {
+        "object_id": "EVD_001",
+        "version": 1
+      },
+      "relation": "CONTEXT",
+      "quoted_span": "【虚构离线样例】机构拟研究新增算力供电试点；尚未实施，不能视为已确认订单。",
+      "interpretation_zh": "仅证明发言内容，不证明试点实施或公司订单"
+    }
+  ],
+  "raw_contents": {
+    "RAW_001": "【虚构离线样例】机构拟研究新增算力供电试点；尚未实施，不能视为已确认订单。"
+  }
+}
