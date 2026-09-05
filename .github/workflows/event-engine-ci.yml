@@ -29,7 +29,7 @@ jobs:
         with:
           python-version: ${{ matrix.python }}
       - name: 安装已锁版本与哈希的独立依赖
-        run: python -m pip install --require-hashes --only-binary=:all: -r requirements.lock
+        run: 'python -m pip install --require-hashes --only-binary=:all: -r requirements.lock'
       - name: 安装 Event Engine 包
         run: python -m pip install --no-build-isolation --no-deps -e .
       - name: 依赖一致性

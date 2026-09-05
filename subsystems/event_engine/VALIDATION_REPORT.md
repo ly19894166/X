@@ -52,6 +52,8 @@ PIT 专项 41 项是 95 项总测试的子集，不相加为136项。
 新增 `.github/workflows/event-engine-ci.yml`，仅在本子系统/自身工作流的 PR 改动触发，
 矩阵 Windows/Linux × Python3.11/3.12，复用同一组focused/PIT测试并校验CLI。
 远端实际结果在 PR Checks 留存，不能用本地Windows结果代替尚未完成的其他环境CI。
+首次提交 `8072245` 的工作流未启动测试（run `33998101316`，jobs为空）；
+安装命令中的 `--only-binary=:all:` 已加YAML引号，后续提交由PR同步触发独立CI验证。
 
 HOLD范围：真实原始来源公开时间证明、采集就绪时间、数据库提交耐久性、真实账户或数据授权、
 持续在线覆盖与Alpha表现。Phase1只验证fixture声明，不声称真实持久化或Live验收通过。
