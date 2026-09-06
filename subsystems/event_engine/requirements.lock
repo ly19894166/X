@@ -1,9 +1,28 @@
-# Phase 1 Python 3.11/3.12, Windows x64 / Linux x64; PyPI release wheel SHA-256.
-# Install with --require-hashes --only-binary=:all:. No unpinned transitives.
+# Phase 2: pinned release artifacts; sgmllib3k is upstream sdist-only.
+# Bootstrap requirements-build.lock first; then --require-hashes --no-build-isolation --only-binary=:all: --no-binary=sgmllib3k.
 annotated-types==0.8.0 \
     --hash=sha256:f072f4d804ea359e4eaf198b1af7a8b0943881a87f31bb764f8bf219bb9419e0
+anyio==4.15.1 \
+    --hash=sha256:6152fdbbf9a77fdec97731721bebf7c4c44f7c29b424b0065826173efc7ed101
+certifi==2026.7.22 \
+    --hash=sha256:62f22742b58a1a33014a2b6b706588a8d7e2a88ae7bd1a6ebe8c992928483775
 colorama==0.4.6 ; sys_platform == "win32" \
     --hash=sha256:4f1d9991f5acc0ca119f9d443620b77f9d6b33703e51011c16baf57afb285fc6
+feedparser==6.0.12 \
+    --hash=sha256:6bbff10f5a52662c00a2e3f86a38928c37c48f77b3c511aedcd51de933549324
+greenlet==3.5.5 \
+    --hash=sha256:74cc6df89ec5302337adc9cf096221cbed2510fd444b0e0f1586cf0470740864 \
+    --hash=sha256:ab3df3dffb58bf70564e93a5cec7941e4d9faa5a36cc4234a10d3131afe04f53 \
+    --hash=sha256:147b25a42e5ca5be3d42356e8f608b37af715a1c196e9bf9d1627f3341adfe1d \
+    --hash=sha256:49ddacd36af37735fab103846f4ee4d18a492dde72730d1699c0c8ebe30d9f18
+h11==0.16.0 \
+    --hash=sha256:63cf8bbe7522de3bf65932fda1d9c2772064ffb3dae62d55932da54b31cb6c86
+httpcore==1.0.9 \
+    --hash=sha256:2d400746a40668fc9dec9810239072b40b4484b640a8c38fd654a024c7a1bf55
+httpx==0.28.1 \
+    --hash=sha256:d909fcccc110f8c7faf814ca82a9a4d816bc5a6dbfea25d6591d6985b8ba59ad
+idna==3.19 \
+    --hash=sha256:815e7be7a7806d54abb586dc943addc79e8b2ee16915059658cbeff4b1b43bf4
 iniconfig==2.3.0 \
     --hash=sha256:f631c04d2c48c52b84d0d0549c99ff3859c98df65b3101406327ecc7d53fbf12
 packaging==26.3 \
@@ -23,6 +42,16 @@ pytest==9.0.2 \
     --hash=sha256:711ffd45bf766d5264d487b917733b453d917afd2b0ad65223959f59089f875b
 setuptools==80.9.0 \
     --hash=sha256:062d34222ad13e0cc312a4c02d73f059e86a4acbfbdea8f8f76b28c99f306922
+sgmllib3k==1.0.0 \
+    --hash=sha256:7868fb1c8bfa764c1ac563d3cf369c381d1325d36124933a726f29fcdaa812e9
+SQLAlchemy==2.0.43 \
+    --hash=sha256:db691fa174e8f7036afefe3061bc40ac2b770718be2862bfb03aabae09051aca \
+    --hash=sha256:c5d1730b25d9a07727d20ad74bc1039bbbb0a6ca24e6769861c1aa5bf2c4c4a8 \
+    --hash=sha256:1a113da919c25f7f641ffbd07fbc9077abd4b3b75097c888ab818f962707eb48 \
+    --hash=sha256:1c6d85327ca688dbae7e2b06d7d84cfe4f3fffa5b5f9e21bb6ce9d0e1a0e0e0a \
+    --hash=sha256:1681c21dd2ccee222c2fe0bef671d1aef7c504087c9c4e800371cfcc8ac966fc
+tenacity==9.1.2 \
+    --hash=sha256:f77bf36710d8b73a50b2dd155c97b870017ad21afe6ab300326b0371b3b05138
 typing-inspection==0.4.4 \
     --hash=sha256:65b8397ba37ccbce054456aaccddfc91e6e3083c92824df348d96ca832f3f147
 typing_extensions==4.16.0 \

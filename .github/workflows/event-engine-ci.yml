@@ -1,4 +1,4 @@
-name: Event Engine Phase 1
+name: Event Engine Phase 2
 
 on:
   pull_request:
@@ -28,15 +28,21 @@ jobs:
       - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
         with:
           python-version: ${{ matrix.python }}
+      - name: 安装已锁构建工具
+        run: 'python -m pip install --require-hashes --only-binary=:all: -r requirements-build.lock'
       - name: 安装已锁版本与哈希的独立依赖
-        run: 'python -m pip install --require-hashes --only-binary=:all: -r requirements.lock'
+        run: 'python -m pip install --require-hashes --no-build-isolation --only-binary=:all: --no-binary=sgmllib3k -r requirements.lock'
       - name: 安装 Event Engine 包
         run: python -m pip install --no-build-isolation --no-deps -e .
       - name: 依赖一致性
         run: python -m pip check
-      - name: Phase 1 focused tests
+      - name: Phase 1 + Phase 2 focused tests
         run: python -m pytest -q
       - name: PIT tests 单独报告
         run: python -m pytest -q -m pit
       - name: 中文离线 fixture
         run: x-event ingest --fixture configs/offline_fixture.zh-CN.json
+      - name: Phase 2 持久化 fixture
+        run: x-event ledger-ingest --db phase2-ci.sqlite --fixture configs/phase2_observations.zh-CN.json
+      - name: Phase 2 Replay
+        run: x-event ledger-replay --db phase2-ci.sqlite --as-of 2099-01-01T00:00:00Z

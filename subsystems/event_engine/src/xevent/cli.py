@@ -1,4 +1,4 @@
-"""Phase 1 离线 CLI；任何命令均不联网、不持久化业务记录。"""
+"""Phase 1 契约与 Phase 2 SQLite CLI；命令均不联网。"""
 import argparse
 import json
 import sys
@@ -17,7 +17,7 @@ class ChineseParser(argparse.ArgumentParser):
 
 
 def main(argv=None):
-    parser = ChineseParser(description="X 事件引擎 Phase 1：离线契约校验与 Schema 导出")
+    parser = ChineseParser(description="X 事件引擎：离线契约校验与 Phase 2 SQLite 底座")
     sub = parser.add_subparsers(dest="command", required=True, title="命令")
     ingest = sub.add_parser("ingest", help="校验离线 fixture；不写入数据库")
     ingest.add_argument("--fixture", type=Path, required=True, help="中文 JSON fixture 路径")
@@ -29,8 +29,19 @@ def main(argv=None):
     schema = sub.add_parser("schema", help="使用 Pydantic 导出 JSON Schema")
     schema.add_argument("--model", choices=tuple(SCHEMAS) + ("OfflineFixture",), required=True, help="契约名称")
     schema.add_argument("--output", type=Path, help="输出文件；省略时显示 JSON")
+    persist = sub.add_parser("ledger-ingest", help="将Phase2离线fixture原子写入独立SQLite")
+    persist.add_argument("--db", type=Path, required=True, help="独立SQLite数据库路径")
+    persist.add_argument("--fixture", type=Path, required=True, help="Phase2虚构观察fixture")
+    replay = sub.add_parser("ledger-replay", help="按知识截止点回放已发布历史")
+    replay.add_argument("--db", type=Path, required=True, help="已有独立SQLite数据库")
+    replay.add_argument("--as-of", required=True, help="带时区知识截止时间")
+    recover = sub.add_parser("ledger-recover", help="恢复已提交但缺回执的批次")
+    recover.add_argument("--db", type=Path, required=True, help="已有独立SQLite数据库")
     args = parser.parse_args(argv)
     try:
+        if args.command.startswith("ledger-"):
+            from .runtime.offline import ledger_command
+            return ledger_command(args)
         if args.command == "schema":
             model = OfflineFixture if args.model == "OfflineFixture" else SCHEMAS[args.model]
             result = json.dumps(model.model_json_schema(), ensure_ascii=False, indent=2) + "\n"
