@@ -1,4 +1,4 @@
-"""Phase 1 契约与 Phase 2 SQLite CLI；命令均不联网。"""
+"""Phase 1契约、Phase 2 SQLite与Phase 3虚构状态CLI；命令均不联网。"""
 import argparse
 import json
 import sys
@@ -9,6 +9,9 @@ from pydantic import ValidationError
 from .contracts import SCHEMAS
 from .contracts.bundle import OfflineFixture
 from .contracts.common import PITError, PITQuery
+from .states.contracts import SCHEMAS as STATE_SCHEMAS
+
+CLI_SCHEMAS = {**SCHEMAS, **STATE_SCHEMAS}
 
 
 class ChineseParser(argparse.ArgumentParser):
@@ -17,7 +20,7 @@ class ChineseParser(argparse.ArgumentParser):
 
 
 def main(argv=None):
-    parser = ChineseParser(description="X 事件引擎：离线契约校验与 Phase 2 SQLite 底座")
+    parser = ChineseParser(description="X 事件引擎：离线契约、SQLite底座与Phase 3虚构事件状态")
     sub = parser.add_subparsers(dest="command", required=True, title="命令")
     ingest = sub.add_parser("ingest", help="校验离线 fixture；不写入数据库")
     ingest.add_argument("--fixture", type=Path, required=True, help="中文 JSON fixture 路径")
@@ -27,7 +30,7 @@ def main(argv=None):
     inspect.add_argument("--as-of", required=True, help="带时区的知识截止时间")
     inspect.add_argument("--mode", choices=("LIVE_FORWARD", "OBSERVED_REPLAY", "PUBLIC_PIT_RESEARCH"), default="LIVE_FORWARD", help="研究模式；历史模拟隔离")
     schema = sub.add_parser("schema", help="使用 Pydantic 导出 JSON Schema")
-    schema.add_argument("--model", choices=tuple(SCHEMAS) + ("OfflineFixture",), required=True, help="契约名称")
+    schema.add_argument("--model", choices=tuple(CLI_SCHEMAS) + ("OfflineFixture",), required=True, help="契约名称")
     schema.add_argument("--output", type=Path, help="输出文件；省略时显示 JSON")
     persist = sub.add_parser("ledger-ingest", help="将Phase2离线fixture原子写入独立SQLite")
     persist.add_argument("--db", type=Path, required=True, help="独立SQLite数据库路径")
@@ -37,13 +40,20 @@ def main(argv=None):
     replay.add_argument("--as-of", required=True, help="带时区知识截止时间")
     recover = sub.add_parser("ledger-recover", help="恢复已提交但缺回执的批次")
     recover.add_argument("--db", type=Path, required=True, help="已有独立SQLite数据库")
+    states = sub.add_parser("state-fixture", help="执行Phase3虚构时间线；不联网、不接真实行情")
+    states.add_argument("--db", type=Path, required=True, help="新的独立演示数据库")
+    states.add_argument("--fixture", type=Path, required=True, help="Phase3中文虚构场景")
     args = parser.parse_args(argv)
     try:
+        if args.command == "state-fixture":
+            from .runtime.state_fixture import run_fixture
+            print(json.dumps(run_fixture(args.fixture, args.db), ensure_ascii=False, indent=2))
+            return 0
         if args.command.startswith("ledger-"):
             from .runtime.offline import ledger_command
             return ledger_command(args)
         if args.command == "schema":
-            model = OfflineFixture if args.model == "OfflineFixture" else SCHEMAS[args.model]
+            model = OfflineFixture if args.model == "OfflineFixture" else CLI_SCHEMAS[args.model]
             result = json.dumps(model.model_json_schema(), ensure_ascii=False, indent=2) + "\n"
             if args.output:
                 args.output.write_text(result, encoding="utf-8")

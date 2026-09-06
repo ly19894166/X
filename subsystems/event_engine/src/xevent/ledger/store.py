@@ -15,8 +15,9 @@ from pydantic import TypeAdapter
 from ..discovery.novelty import POLICY_VERSION, classify
 from . import contracts as c
 from .schema import batches, metadata, migrate, publications, raw_archive, receipts, records
+from ..states.contracts import SCHEMAS as STATE_SCHEMAS
 
-MODELS = {**SCHEMAS, **{name: getattr(c, name) for name in (
+MODELS = {**SCHEMAS, **STATE_SCHEMAS, **{name: getattr(c, name) for name in (
     "EventLedgerEntry", "EvidenceChange", "OriginClusterVersion", "NoveltyDecision",
     "CollectorCursor", "OutboxJob", "SourceHealth")}}
 
@@ -106,7 +107,7 @@ class Ledger:
                 raise ValueError("PIT_INPUT：输入模式或隔离状态非法")
             common = dict(object_id=key[0], version=key[1], recorded_at=stamp["recorded_at"],
                           available_at=stamp["available_at"], content_hash="0" * 64,
-                          run_id=row["batch_id"], policy_version=POLICY_VERSION,
+                          run_id=row["batch_id"], policy_version=payload.get("policy_version", POLICY_VERSION),
                           input_version_refs=[InputVersionRef(**ref(r), available_at=r.available_at) for r in inputs])
             model = MODELS[row["kind"]]
             if issubclass(model, DerivedEnvelope):
@@ -345,6 +346,11 @@ class Ledger:
                            dna=seed.dna.model_dump(mode="json"), first_public_at=observation.published_at.isoformat() if observation.published_at else None,
                            first_seen_at=(previous_event.first_seen_at if previous_event else observation.first_seen_at).isoformat(),
                            last_material_update_at=material_at.isoformat(), evidence_refs=[e_ref], revision_reason="原始观察追加；不执行状态转换",
+                           fact_state=previous_event.fact_state if previous_event else "UNVERIFIED",
+                           narrative_state=previous_event.narrative_state if previous_event else "UNKNOWN",
+                           pricing_state=previous_event.pricing_state if previous_event else "UNKNOWN",
+                           lifecycle_status=previous_event.lifecycle_status if previous_event else "ACTIVE",
+                           priority=previous_event.priority if previous_event else "P3",
                            supersedes_version=previous_event.version if previous_event else None), event_inputs)
             self._put(conn, batch, "EventLedgerEntry", "LED:" + seed.event_id, ev,
                       dict(event_ref=event_ref, previous_version=previous_event.version if previous_event else None,
@@ -418,10 +424,12 @@ class Ledger:
                            reason_codes=["REVIEWED_EXPLICIT_ORIGIN_CHAIN"]), refs)
         self._write("CONFIRM:" + confirmation_key, digest([origin_ids, refs, proof_span]), build)
 
-    def origin_summary(self, *, as_of, event_id):
+    def origin_summary(self, *, as_of, event_id, evidence_refs=None):
         history = self.history(as_of=as_of)
         evidence_ids = {(r.object_id, r.version) for e in history if isinstance(e, EventVersion) and e.event_id == event_id
                         for r in e.evidence_refs}
+        if evidence_refs is not None:
+            evidence_ids &= {(r.object_id, r.version) for r in evidence_refs}
         origins = {e.origin_cluster_id for e in history if isinstance(e, EvidenceVersion) and (e.object_id, e.version) in evidence_ids}
         groups = [{o} for o in origins]
         known = set()

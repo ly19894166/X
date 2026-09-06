@@ -1,0 +1,10 @@
+{
+  "description_zh": "完全虚构的离线事件状态演示；UTC时间为fixture声明，非真实采集/PIT数据源验收",
+  "base_fixture": "offline_fixture.zh-CN.json",
+  "steps": [
+    {"at": "2026-09-06T10:00:00Z", "text": "虚构机构可能宣布政策", "claim_kind": "RUMOR", "expected_fact": "UNVERIFIED"},
+    {"at": "2026-09-06T10:30:00Z", "text": "虚构负责机构正式确认政策", "claim_kind": "FACT", "assessment": "OFFICIAL_CONFIRMATION", "expected_fact": "OFFICIALLY_CONFIRMED"},
+    {"at": "2026-09-06T11:00:00Z", "text": "虚构负责机构发布官方否认", "claim_kind": "FACT", "assessment": "OFFICIAL_DENIAL", "expected_fact": "CONTRADICTED"}
+  ],
+  "replay_as_of": "2026-09-06T10:15:00Z"
+}
