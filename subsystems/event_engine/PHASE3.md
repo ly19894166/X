@@ -46,7 +46,8 @@ EvidenceAssessment需要明确人工/fixture标注；原文片段、来源身份
 独立确认只数支持本主张的合格一手材料：复用Phase2 `origin_summary`，新增可选证据子集过滤。
 同source多个Origin只算一个独立来源；同根70转载也只能算一个；未经核验的传闻来源不增加支持计数。
 UNKNOWN独立性为null/HOLD。官方一步确认需已验证S0、FACT角色、一手FACT材料、对应机构权限说明。
-宣布不会自动成为IMPLEMENTED；已验证来源完整结构撤回的R5可产生CONTRADICTED，未验证来源的R5只触发P0并HOLD事实判断。
+宣布不会自动成为IMPLEMENTED。R5本身只触发P0；即使来源VERIFIED、材料VALIDATED且为一手，也不能代替主张语义核验。
+R5相关Fact降级必须有显式版本化COUNTEREVIDENCE/OFFICIAL_DENIAL/INVALIDATION assessment；尚未核验时保持原Fact并HOLD。
 R3/R4不自动映射事实等级；新一手材料可立即触发研究，但主张未核验前仍保持原事实状态。
 新有利材料不能绕过未裁定反证；归档不代表否定。Priority表示研究紧迫程度，强反证为P0。
 
@@ -61,6 +62,12 @@ R3/R4不自动映射事实等级；新一手材料可立即触发研究，但主
 Source去重用于传播广度；同Origin转载仍可形成传播，但不成为多个事实根。
 R1主要通过新传播进入叙事。画像按source/topic/版本及截止时点读取，sample_n=0不提供专业发现门槛，粉丝数不参与判定。
 传闻可同时为UNVERIFIED+CROWDED；官方确认可同时为NO_REACTION。
+
+OriginSourceSummary的计数、evidence_refs、source_refs、cluster_refs统一从有效SUPPORT子集推导；
+子集计数的来源身份只读该子集具体证据引用的Source版本，不能借全事件其他材料补足独立性。
+StateTransition.evidence_refs按维度保存实际输入：FACT为核验assessment的证据；NARRATIVE为当前/前窗传播、
+窗内编辑/删除以及当前来源对应主题画像的证据；PRICING为本次SecurityPriceObservation的具体证据。
+EventPriceSummary同样只引用本次价格证据。共享证据可被多个实际消费它的维度引用，完整事件输入保留于input_version_refs供审计。
 
 ### 与Phase1词表的明确边界
 
@@ -90,16 +97,23 @@ ARCHIVE仅把新的EventVersion标为ARCHIVED。REACTIVATE要求归档后新增�
 Lineage裁定是显式人工输入，不是自动相似度合并；新关系不能回填旧时点。生命周期以EventVersion为准，Snapshot描述其引用版本的重算结论。
 
 RecomputeTrigger支持NEW_PRIMARY_EVIDENCE、OFFICIAL_CONFIRMATION、OFFICIAL_DENIAL、R3_MATERIAL_EVIDENCE、R4_EVENT_MUTATION、
-R5_COUNTEREVIDENCE、NARRATIVE_ACCELERATION、PRICE_STATE_CHANGE、CROSS_ASSET_CONFIRMATION、LINEAGE_CHANGE。
-P0用于强反证/官方否认，P1用于其他实质重算，P2用于普通传播加速，P3用于无新触发的背景观察。
+R5_COUNTEREVIDENCE、NARRATIVE_ACCELERATION、PRICE_STATE_CHANGE、CROSS_ASSET_CONFIRMATION、LINEAGE_CHANGE、ORIGIN_RELATION_CHANGE。
+P0用于R5待核验反证信号、显式强反证/官方否认，P1用于其他实质重算，P2用于普通传播加速，P3用于无新触发的背景观察。
 仅普通传播可以归并到cooldown父任务；pending按该组最新版本/输入和not_before读取，避免丢掉冷却期间新材料。
 官方否认、R5和强反证绕过普通冷却；多个child各有独立幂等键。这里只给出可处理研究队列，不运行研究、LLM或外部副作用。
+
+later confirm_origin改变合源关系时，在同一事务为所有受影响Event（含已有同源关系连接的事件）追加P1/READY的
+ORIGIN_RELATION_CHANGE任务，不受普通cooldown限制；任务引用新OriginClusterVersion与Event固定版本。
+该触发策略版本为ORIGIN_RELATION_CHANGE_V0.1；尚未生成Phase3 Snapshot的事件也会排队，不需要猜测其状态策略。
+重复同键不重复任务，已有同源关系的重复确认不产生新的关系变化任务。新任务与新簇均在提交/发布后可见，不回填旧as_of。
+任务不直接改Fact；后续evaluate按原StatePolicy重算，独立SUPPORT从2降为1时沿用CONTRADICTED/HOLD复核规则。
 
 ## Ledger增量与失败恢复
 
 复用原SQLite五表、WAL、不可变触发器、业务事务/提交回执/publication fence；**无需DB Schema迁移或新依赖**。
-Ledger仅新增Phase3 kind注册、保留输入policy_version、摄取时继承旧三维/生命周期、origin_summary可选支持证据子集。
+Ledger仅新增Phase3 kind注册、保留输入policy_version、摄取时继承旧三维/生命周期、origin_summary可选支持证据子集及同源关系重算任务。
 转换/时钟/事件版本/账本项/重算触发器同事务；Lineage及child同事务。时间仍由Phase2提交后回执决定，绝不用INSERT时间替代recorded_at。
+同源确认与重算任务也同事务；回滚不能遗留任务，提交后中断沿用原发布回执恢复协议。
 异常回滚无半条状态或child；业务已提交但回执未完成保持不可见，恢复后保守延后可用时间。HOLD和非法转移不使其他事件停止。
 
 ## 离线运行与停止点

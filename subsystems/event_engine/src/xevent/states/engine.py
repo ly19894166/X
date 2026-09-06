@@ -150,6 +150,9 @@ class StateEngine:
             support = [a.evidence_ref for a in assessments if a.kind == "SUPPORT"
                        and (resolved_at is None or a.available_at > resolved_at)]
             summary = self.ledger.origin_summary(as_of=cutoff, event_id=event.event_id, evidence_refs=support)
+            support_evidence = [view[key_of(r)] for r in support]
+            support_origins = {e.origin_cluster_id for e in support_evidence}
+            support_clusters = [c for c in clusters if set(c.member_origin_ids) & support_origins]
             input_refs = unique_refs([event, policy, *evidence, *sources, *clusters, *assessments, *prices, *profiles,
                                      *([previous] if previous else [])])
             def put(kind, identity, payload, extra=(), version=1):
@@ -160,24 +163,33 @@ class StateEngine:
             origin_ref = put("OriginSourceSummary", "ORIGIN_SUM:" + batch,
                 dict(event_ref=ref(event), as_of=cutoff.isoformat(), origin_count=summary["origin_count"],
                      independent_source_count=summary["independent_source_count"], independence_status=summary["status"],
-                     cluster_refs=unique_refs(clusters), source_refs=unique_refs(sources), evidence_refs=unique_refs(support)))
+                     cluster_refs=unique_refs(support_clusters), source_refs=unique_refs(e.source_ref for e in support_evidence),
+                     evidence_refs=unique_refs(support)))
             window_start = cutoff - timedelta(seconds=policy.rules.window_seconds)
             previous_start = window_start - timedelta(seconds=policy.rules.window_seconds)
             current = [e for e in evidence if window_start < e.first_seen_at <= cutoff]
-            old_sources = {e.source_id for e in evidence if previous_start < e.first_seen_at <= window_start}
+            previous_window = [e for e in evidence if previous_start < e.first_seen_at <= window_start]
+            old_sources = {e.source_id for e in previous_window}
             ids = sorted({e.source_id for e in current})
-            tiers = sorted({s.tier for s in sources if s.source_id in ids})
-            professional = {p.source_id for p in profiles if p.source_id in ids and p.topic_id in event.dna.domain_ids
-                            and p.category in ("INDUSTRY_LEADER", "EXPLAINER") and p.sample_n > 0}
+            current_sources = [view[key_of(e.source_ref)] for e in current]
+            tiers = sorted({s.tier for s in current_sources})
+            used_profiles = [p for p in profiles if p.source_id in ids and p.topic_id in event.dna.domain_ids]
+            professional = {p.source_id for p in used_profiles
+                            if p.category in ("INDUSTRY_LEADER", "EXPLAINER") and p.sample_n > 0}
             changes = [r for r in view.values() if isinstance(r, EvidenceChange) and key_of(r.evidence_ref) in event_evidence
                        and window_start < r.observed_at <= cutoff]
+            narrative_evidence = [*current, *previous_window,
+                *(r.evidence_ref for r in changes if r.change_type in ("EDIT", "DELETE", "RETRACT")),
+                *(r for p in used_profiles for r in p.evidence_refs)]
+            input_refs.extend(unique_refs(narrative_evidence))
             diffusion = dict(event_ref=ref(event), observation_window=dict(start=window_start.isoformat(), end=cutoff.isoformat()),
                 source_ids=ids, source_tiers=tiers,
                 origin_count=self.ledger.origin_summary(as_of=cutoff, event_id=event.event_id, evidence_refs=current)["origin_count"],
                 previous_source_count=len(old_sources), professional_sources=len(professional),
                 edit_count=len({r.evidence_ref.object_id for r in changes if r.change_type == "EDIT"}),
                 delete_count=len({r.evidence_ref.object_id for r in changes if r.change_type in ("DELETE", "RETRACT")}),
-                profile_refs=unique_refs(profiles), source_refs=unique_refs(sources), evidence_refs=unique_refs(current))
+                profile_refs=unique_refs(used_profiles), source_refs=unique_refs(current_sources),
+                evidence_refs=unique_refs(narrative_evidence))
             diffusion_ref = put("DiffusionSummary", "DIFFUSION:" + batch, diffusion)
             novel = [r for r in view.values() if isinstance(r, NoveltyDecision) and key_of(r.evidence_ref) in event_evidence
                      and r.classification in ("R3", "R4", "R5") and (previous is None or r.available_at > previous.available_at)]
@@ -186,18 +198,19 @@ class StateEngine:
             old_fact = previous.fact_state if previous else event.fact_state
             old_narrative = previous.narrative_state if previous else {v:k for k,v in NARRATIVE_TO_LEGACY.items()}.get(event.narrative_state, event.narrative_state)
             old_price = previous.pricing_state if previous else {v:k for k,v in PRICE_TO_LEGACY.items()}.get(event.pricing_state, event.pricing_state)
-            qualified_r5 = any(r.classification == "R5" and view[key_of(view[key_of(r.evidence_ref)].source_ref)].identity_status == "VERIFIED"
-                               and view[key_of(r.evidence_ref)].quality_status == "VALIDATED" for r in novel)
-            facts = fact_reduce(old_fact, assessments, summary["independent_source_count"], new_r5=qualified_r5)
-            if any(r.classification == "R5" for r in novel) and not qualified_r5 and facts[0] == old_fact:
-                facts = old_fact, "反证_来源待核验但立即重算", "HOLD"
+            facts = fact_reduce(old_fact, assessments, summary["independent_source_count"])
+            if any(r.classification == "R5" for r in novel) and facts[0] == old_fact:
+                facts = old_fact, "反证_R5仅触发重算需显式主张核验", "HOLD"
             narrative = narrative_reduce(old_narrative, diffusion, policy.rules)
             # 每个security只允许一个指定观察版本，避免将新旧观察混成分歧。
             if len({p.security_id for p in prices}) != len(prices):
                 raise ValueError("PRICE_DUPLICATE：同一证券只能提供一个观察版本")
             pricing = pricing_reduce(old_price, prices)
+            pricing_evidence = [r for p in prices for r in p.evidence_refs]
+            dimension_evidence = {"FACT": [a.evidence_ref for a in assessments],
+                                  "NARRATIVE": narrative_evidence, "PRICING": pricing_evidence}
             price_summary = put("EventPriceSummary", "PRICE_SUM:" + batch,
-                dict(event_ref=ref(event), pricing_state=pricing[0], observation_refs=unique_refs(prices), evidence_refs=unique_refs(evidence)))
+                dict(event_ref=ref(event), pricing_state=pricing[0], observation_refs=unique_refs(prices), evidence_refs=unique_refs(pricing_evidence)))
             transition_refs = []
             for dimension, before, reduced in (("FACT", old_fact, facts), ("NARRATIVE", old_narrative, narrative), ("PRICING", old_price, pricing)):
                 after, reason, outcome = reduced
@@ -205,7 +218,7 @@ class StateEngine:
                 transition_refs.append(put("StateTransition", dimension + ":" + batch,
                     dict(event_ref=ref(event), dimension=dimension, previous_state=before, new_state=after,
                          origin_source_summary_ref=origin_ref, policy_ref=ref(policy), outcome=outcome,
-                         reason_codes=[reason], evidence_refs=unique_refs(evidence)), [origin_ref, diffusion_ref, price_summary]))
+                         reason_codes=[reason], evidence_refs=unique_refs(dimension_evidence[dimension])), [origin_ref, diffusion_ref, price_summary]))
             reasons = {"R3": "R3_MATERIAL_EVIDENCE", "R4": "R4_EVENT_MUTATION", "R5": "R5_COUNTEREVIDENCE"}
             trigger_reasons = {reasons[r.classification] for r in novel}
             if any(e.version == 1 and e.is_first_hand and e.quality_status == "VALIDATED"

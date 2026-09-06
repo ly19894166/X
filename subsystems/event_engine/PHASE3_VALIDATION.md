@@ -6,19 +6,38 @@ Issue #7已由用户关闭，Issue #8明确授权Phase3；不重做Phase1/2或�
 
 ## 最终本地原始结果
 
+本次只修PR #19第一轮人工Review的三个阻塞项，修订基线`9e9f31768e75d418f8bb4b32f767e5d67e2288eb`。
+原交付222/80为修订前结果，以下为本次代码的重新验证结果。
+
 Windows / CPython3.11.9，复用Phase2虚拟环境，仅将PYTHONPATH指向本工作树src，未重装依赖：
 
 ```text
+python -m pytest -q tests/test_phase3_review.py
+8 passed in 7.18s
+
 python -m pytest -q
-222 passed in 81.00s (0:01:20)
+230 passed in 96.23s (0:01:36)
 
 python -m pytest -q -m pit
-80 passed, 142 deselected in 16.45s
+87 passed, 143 deselected in 23.57s
 ```
 
-222=Phase1/2原158项+Phase3新增64项；80项PIT为总数子集。
+230=Phase1/2原158项+Phase3原64项+本次8项；87项PIT为总数子集（本次新增7项）。
 新增11个版本Schema均能导出JSON Schema，数据库历史JSON round-trip通过。
 测试全过程禁止真实socket连接；中文state-fixture通过CLI测试。
+
+## 本次Review修订证据
+
+| 阻塞项 | 最小修订与对应测试 |
+|---|---|
+| R5不能自动改Fact | 移除qualified_r5/new_r5捷径；已验证二手/一手R5均保持PLAUSIBLE并P0/HOLD，显式COUNTEREVIDENCE才降级。test_verified_r5_requires_explicit_semantic_assessment两例；原material clock与cooldown测试同步改断言 |
+| later合源重算 | confirm_origin与ORIGIN_RELATION_CHANGE/P1/READY任务同事务；所有受影响事件排队，不受传播冷却；同键幂等和无变化确认不重复任务。test_later_origin_confirmation_queues_immediate_recompute_and_preserves_asof；2源→1源后沿原CONTRADICTED/HOLD，旧as_of不变 |
+| 合源故障恢复 | test_origin_confirmation_task_atomic_recovery两例：事务内故障全部回滚；提交后中断按原回执恢复，最终只保留一簇确认与一条对应任务 |
+| provenance同域 | test_dimension_provenance_and_support_summary_share_exact_subset、test_no_support_has_no_origin_summary_provenance：SUPPORT的count/source/cluster/evidence同域，FACT/PRICING/两窗NARRATIVE分别引用真实输入，全事件输入仅留审计refs |
+| profile来源范围 | test_narrative_provenance_includes_used_profile_but_not_other_topic：对应主题画像证据保留于NARRATIVE，其他主题/FACT/PRICING不混入 |
+
+二手R5用版本化NoveltyDecision离线fixture验证StateEngine输入边界；未改变Phase2确定性分类器。
+原真实结构化R5摄取、material刷新与未知来源测试继续通过。无Live或语义自动核验宣称。
 
 ## 验收证据对应
 

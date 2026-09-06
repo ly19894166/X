@@ -422,6 +422,34 @@ class Ledger:
                       dict(member_origin_ids=origin_ids, basis="CONFIRMED_SAME_ORIGIN", verification="KNOWN_ORIGIN",
                            evidence_refs=refs, confirmation_ref=confirmation_ref.model_dump(), proof_span=proof_span,
                            reason_codes=["REVIEWED_EXPLICIT_ORIGIN_CHAIN"]), refs)
+            # 合源与研究任务同事务发布；关系变化无需等待普通传播cooldown。
+            groups = []
+            for cluster in view.values():
+                if isinstance(cluster, c.OriginClusterVersion) and cluster.basis == "CONFIRMED_SAME_ORIGIN":
+                    members = set(cluster.member_origin_ids)
+                    joined = [g for g in groups if g & members]
+                    groups = [g for g in groups if not g & members]
+                    groups.append(members.union(*joined))
+            if not any(set(origin_ids) <= g for g in groups):
+                affected_origins = set(origin_ids).union(*(g for g in groups if g & set(origin_ids)))
+                affected_evidence = {(e.object_id, e.version) for e in view.values()
+                    if isinstance(e, EvidenceVersion) and e.origin_cluster_id in affected_origins}
+                affected_events = {e.event_id for e in view.values() if isinstance(e, EventVersion)
+                    and any((r.object_id, r.version) in affected_evidence for r in e.evidence_refs)}
+                cutoff = self.now()
+                for event_id in sorted(affected_events):
+                    event = max((e for e in view.values() if isinstance(e, EventVersion) and e.event_id == event_id),
+                                key=lambda e: e.version)
+                    self._put(conn, key, "RecomputeTrigger", "TRIGGER:" + key + ":" + event_id, 1,
+                        dict(event_ref=ref(event), trigger_reasons=["ORIGIN_RELATION_CHANGE"], priority="P1",
+                             idempotency_key="RECOMPUTE:" + key + ":" + event_id, dispatch="READY",
+                             not_before=cutoff.isoformat(), cooldown_parent_ref=None,
+                             policy_version="ORIGIN_RELATION_CHANGE_V0.1",
+                             reason_codes=["重算_同源关系变化需复核独立性"]),
+                        refs + [ref(event), dict(object_id=identity, version=version)]
+                        + [ref(cluster) for cluster in view.values() if isinstance(cluster, c.OriginClusterVersion)
+                           and set(cluster.member_origin_ids) & affected_origins])
+            self.fault("after_origin_confirmation")
         self._write("CONFIRM:" + confirmation_key, digest([origin_ids, refs, proof_span]), build)
 
     def origin_summary(self, *, as_of, event_id, evidence_refs=None):
@@ -449,6 +477,8 @@ class Ledger:
         roots = {}
         for evidence in history:
             if not isinstance(evidence, EvidenceVersion) or evidence.is_first_hand is not True:
+                continue
+            if evidence_refs is not None and (evidence.object_id, evidence.version) not in evidence_ids:
                 continue
             source = sources.get((evidence.source_ref.object_id, evidence.source_ref.version))
             if (source is not None and source.source_id == evidence.source_id

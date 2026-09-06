@@ -132,7 +132,7 @@ def test_r5_bypasses_cooldown(world):
     fields["retracted"]="true"
     receive(world,json.dumps(fields),version="2",change_type="EDIT",structured_fields=fields,structured_basis="SOURCE_STRUCTURED",is_first_hand=True)
     state=evaluate(world,"r5")
-    assert state.fact_state=="CONTRADICTED"
+    assert state.fact_state=="UNVERIFIED"
     assert engine.pending(as_of=clock())[0].priority=="P0"
 
 

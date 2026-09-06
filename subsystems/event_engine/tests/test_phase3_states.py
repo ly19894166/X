@@ -178,7 +178,7 @@ def test_material_clock_inherited_from_phase2(world,level):
     assert clock_record.observed_age_seconds>old_clock.observed_age_seconds
     assert ledger.replay(cutoff)==before
     if level=="R5":
-        assert state.fact_state=="CONTRADICTED" and state.priority=="P0"
+        assert state.fact_state=="UNVERIFIED" and state.priority=="P0"
 
 
 def key_of_ref(r):

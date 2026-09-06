@@ -34,11 +34,11 @@ def check_transition(dimension, previous, new):
         raise ValueError("TRANSITION_FORBIDDEN：非法状态转换，拒绝本事件写入")
 
 
-def fact_reduce(previous, assessments, independent_sources, *, new_r5=False):
+def fact_reduce(previous, assessments, independent_sources):
     resolved = {(ref.object_id, ref.version) for a in assessments if a.kind == "RESOLUTION" for ref in a.resolves_refs}
     negative = [a for a in assessments if a.kind in ("COUNTEREVIDENCE", "OFFICIAL_DENIAL", "INVALIDATION")
                 and (a.object_id, a.version) not in resolved]
-    if negative or new_r5:
+    if negative:
         invalid = previous == "INVALIDATED" or any(a.kind == "INVALIDATION" for a in negative)
         return ("INVALIDATED" if invalid else "CONTRADICTED", "反证_核心证伪" if invalid else "反证_矛盾尚未解除", "APPLIED")
     if previous in ("CONTRADICTED", "INVALIDATED") and not resolved:
