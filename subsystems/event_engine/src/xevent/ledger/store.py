@@ -338,11 +338,13 @@ class Ledger:
             event_inputs = [e_ref, *[r.model_dump() for r in seed.dna.actor_refs]]
             if previous_event:
                 event_inputs.append(ref(previous_event))
+            material_at = (ready if previous_event is None or level in ("R3", "R4", "R5")
+                           else previous_event.last_material_update_at)
             self._put(conn, batch, "EventVersion", seed.event_id, ev,
                       dict(event_id=seed.event_id, title_zh=seed.title_zh, event_type="UNKNOWN", classification_missing_reason="Phase2不做事件分类",
                            dna=seed.dna.model_dump(mode="json"), first_public_at=observation.published_at.isoformat() if observation.published_at else None,
                            first_seen_at=(previous_event.first_seen_at if previous_event else observation.first_seen_at).isoformat(),
-                           last_material_update_at=ready.isoformat(), evidence_refs=[e_ref], revision_reason="原始观察追加；不执行状态转换",
+                           last_material_update_at=material_at.isoformat(), evidence_refs=[e_ref], revision_reason="原始观察追加；不执行状态转换",
                            supersedes_version=previous_event.version if previous_event else None), event_inputs)
             self._put(conn, batch, "EventLedgerEntry", "LED:" + seed.event_id, ev,
                       dict(event_ref=event_ref, previous_version=previous_event.version if previous_event else None,
@@ -434,8 +436,32 @@ class Ledger:
                 groups = [g for g in groups if not g & members]
                 if joined:
                     groups.append(set().union(*joined))
-        return dict(origin_count=len(groups), independent_source_count=len(groups) if origins <= known else None,
-                    status="KNOWN_ORIGIN_COUNT" if origins <= known else "HOLD_INDEPENDENCE_UNKNOWN")
+        # 使用证据当时引用的来源版本，后来的身份验证不得升级旧证据。
+        sources = {(s.object_id, s.version): s for s in history if isinstance(s, Source)}
+        roots = {}
+        for evidence in history:
+            if not isinstance(evidence, EvidenceVersion) or evidence.is_first_hand is not True:
+                continue
+            source = sources.get((evidence.source_ref.object_id, evidence.source_ref.version))
+            if (source is not None and source.source_id == evidence.source_id
+                    and source.identity_status == "VERIFIED"
+                    and source.status not in ("HOLD", "QUARANTINED")
+                    and evidence.quality_status == "VALIDATED"
+                    and evidence.status not in ("HOLD", "QUARANTINED")):
+                roots.setdefault(evidence.origin_cluster_id, set()).add(source.source_id)
+        units = []
+        resolved = origins <= known
+        for group in groups:
+            identities = set().union(*(roots.get(origin, set()) for origin in group))
+            if not identities:
+                resolved = False
+                continue
+            # 已确认同源的一组最多贡献一个独立单元；跨Origin共享source_id也只算一次。
+            joined = [unit for unit in units if unit & identities]
+            units = [unit for unit in units if not unit & identities]
+            units.append(identities.union(*joined))
+        return dict(origin_count=len(groups), independent_source_count=len(units) if resolved else None,
+                    status="KNOWN_ORIGIN_COUNT" if resolved else "HOLD_INDEPENDENCE_UNKNOWN")
 
     def complete_outbox(self, job_id, result_zh, *, completion_key=None):
         """仅演示数据库内幂等消费确认；不调用外部副作用。"""

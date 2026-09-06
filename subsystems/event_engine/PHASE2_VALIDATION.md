@@ -3,7 +3,32 @@
 日期：2026-09-06。基线：`8134527e0270143ef9827effa776f7b90f372642`，Phase 1 PR #17人工复审通过，Issue #6为COMPLETED。
 分支：build/x-event-engine-phase2。只检查指定Issue/PR/HEAD/CI后继续，没有重新全网研究或重做Phase1。
 
-## 本地原始结果
+## 人工Review修订验证（2026-09-06）
+
+修订基线：`6c1171a95932596a0aaf587b9847d8b9068dd1b0`，沿用原分支和PR #18。
+仅修独立来源计数、last_material_update_at，并澄清Migration边界；未增加依赖或修改数据库结构。
+
+```text
+python -m pytest -q tests/test_phase2_ledger.py -k 'origin or material_update'
+10 passed, 28 deselected in 49.61s
+
+python -m pytest -q
+158 passed in 63.54s (0:01:03)
+
+python -m pytest -q -m pit
+61 passed, 97 deselected in 6.65s
+```
+
+158=原148项+10项Review回归；PIT61项为总数子集。
+新增验证：同一已验证一手来源两个Origin为2/1、不同已验证一手来源为2/2；保留70转载为1/1的测试。
+已验证一手来源后来确认同源为2/2→1/1，旧as_of保持2/2；无法验证根来源则保持null/HOLD。
+后来Source身份验证不能替换旧Evidence引用的来源版本。
+逐项验证R1/R2/UNDETERMINED保留实质更新时间、R3/R4/R5推进、初始时间设置及旧as_of完整Replay不变。
+Migration文档明确仅版本0拒绝已有业务表，版本1不承诺完整Schema审计。
+本修订四组远端CI及最终SHA以PR #18对应提交的Checks和修订说明为准；以下148/51是修订前历史结果。
+sgmllib3k的HOLD_LICENSE_TEXT_FOR_REDISTRIBUTION保持；未做Live smoke，不进入Phase3。
+
+## 修订前本地原始结果（历史记录）
 
 Windows x64 / CPython3.11.9，独立虚拟环境：
 
@@ -52,7 +77,7 @@ Replay versions: 22
 
 ## CI与HOLD
 
-Event Engine独立工作流：Windows/Linux × Python3.11/3.12，锁依赖、pip check、完整148项/PIT51项和两套中文fixture。
+Event Engine独立工作流：Windows/Linux × Python3.11/3.12，锁依赖、pip check、完整158项/PIT61项和两套中文fixture。
 实际远端CI结果以本PR Checks及最终PR交付说明为准；本地PASS不代替远端未运行的环境。
 未跑第三方框架全套测试，没有重新搜索开源项目，没有调用模型或付费API。
 

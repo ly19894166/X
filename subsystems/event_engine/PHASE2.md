@@ -68,6 +68,11 @@ Replay按as_of筛选全部具体版本，保留HOLD/失败记录供审计；需�
 已验证来源的一手内容可形成已知Origin；单凭文本相似或未知来源不能被算成独立共识。
 不同事件即使同样的通用文本也不跨事件以hash强制合源。未知关系保留不同簇，independent_source_count为null/HOLD。
 origin_count（当前不同簇数）和独立来源数量分开，不能把两者混为一谈。
+independent_source_count按已验证一手来源身份单元保守计数：使用Evidence引用的固定Source版本，
+要求该版本identity_status=VERIFIED、一手Evidence已校验且来源/证据未隔离。同一source_id的多个Origin只贡献一个单元；
+已确认同源的多个来源也只贡献一个单元，跨簇共享来源身份继续去重。任一簇缺少可验证一手根则整体返回null/HOLD。
+不同source_id代表登记时已核验的不同来源身份；本Phase不自动核验媒体控制关系或来源登记真实性。
+后来Source身份升级不能替换旧Evidence引用的Source版本，也不能回填旧as_of独立来源数。
 
 后来人工确认同源必须调用显式确认接口：保存覆盖原始簇的具体证据版本、新确认材料及原文片段；
 片段须能在原始确认材料逐字定位，包含相关source_id和原始定位。此接口代表有记录的人工核验，
@@ -86,6 +91,8 @@ origin_count（当前不同簇数）和独立来源数量分开，不能把两�
 结构字段必须与原始JSON对象完整相等，不能截取“detail变化”而忽略正文重大变化。
 普通HTTP/RSS Adapter不自动标这些结构字段；没有用LLM判断“重大”。
 R2/R3/R4/R5是有来源定位的规则分类，不等于事件事实已确认。EventVersion三状态默认保持未验证/未知，不执行升级。
+初始Event以本次ready_at设置last_material_update_at；后续仅R3/R4/R5推进该字段。
+R1/R2/UNDETERMINED保留上一EventVersion的值；R0不产生新EventVersion。旧as_of的事件版本不变，不实现EventClock。
 每个NoveltyDecision冻结reason_codes、具体输入/evidence refs、computed_at/recorded_at/available_at及policy_version。
 HOLD不丢原始证据、不阻止后续研究；后来的决定不能改变旧时点已有决定。
 未分类原始观察默认claim_kind=NARRATIVE保守留存，明确的类型由调用者声明，不默认把外部文本升级为FACT。

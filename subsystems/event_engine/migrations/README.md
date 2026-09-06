@@ -2,6 +2,9 @@
 
 入口：`src/xevent/ledger/schema.py::migrate`，使用已锁定SQLAlchemy Core生成DDL。
 空库升级 `PRAGMA user_version=0 → 1`；已有版本1可幂等打开；更高版本HOLD，禁止自动降级。
+未知业务表检查仅用于user_version=0：只要已有非SQLite内部表就拒绝初始化。
+user_version=1会幂等创建缺失的声明表/触发器，不拒绝额外未知表，也不全面比对已有列、约束或触发器定义；
+因此这不是完整Schema一致性审计，不宣称所有版本的未知业务表都会HOLD。
 仅支持本子系统的新独立数据库，没有Market Engine数据库迁移。
 
 | 表 | 主键/约束 | 内容 |

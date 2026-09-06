@@ -154,15 +154,17 @@ def test_origin_one_official_twenty_media_fifty_reposts(setup_ledger):
 
 
 @pytest.mark.pit
-def test_similar_policy_not_merged_and_later_confirmation_is_versioned(setup_ledger):
+@pytest.mark.parametrize("first_hand", [None, True])
+def test_similar_policy_not_merged_and_later_confirmation_is_versioned(setup_ledger, first_hand):
     ledger, clock, source, seed = setup_ledger
-    first = ledger.ingest(obs(clock, source, "政策A：补贴1亿元"), seed)
+    first = ledger.ingest(obs(clock, source, "政策A：补贴1亿元", is_first_hand=first_hand), seed)
     other = Source.model_validate({**source.model_dump(), "object_id": "S2", "source_id": "S2"})
     other = ledger.register_source(other)
-    second = ledger.ingest(obs(clock, other, "政策B：补贴2亿元"), seed)
+    second = ledger.ingest(obs(clock, other, "政策B：补贴2亿元", is_first_hand=first_hand), seed)
     cutoff = clock()
     initial = ledger.origin_summary(as_of=cutoff, event_id=seed.event_id)
-    assert initial["origin_count"] == 2 and initial["independent_source_count"] is None
+    assert initial["origin_count"] == 2
+    assert initial["independent_source_count"] == (2 if first_hand else None)
     clock.advance(minutes=30)
     proof_span = f"{first.source_id} {first.canonical_url_or_locator} 与 {second.source_id} {second.canonical_url_or_locator} 是同一原始消息的转载链"
     proof_seed = EventSeed(**{**seed.model_dump(), "event_id": "PROOF_EVENT"})
@@ -173,7 +175,78 @@ def test_similar_policy_not_merged_and_later_confirmation_is_versioned(setup_led
                           [VersionRef(**ref(first)), VersionRef(**ref(second))], confirmation_key="人工核验链001",
                           confirmation_ref=VersionRef(**ref(proof)), proof_span=proof_span)
     assert ledger.origin_summary(as_of=cutoff, event_id=seed.event_id) == initial
-    assert ledger.origin_summary(as_of=clock(), event_id=seed.event_id)["origin_count"] == 1
+    confirmed = ledger.origin_summary(as_of=clock(), event_id=seed.event_id)
+    assert confirmed["origin_count"] == 1
+    assert confirmed["independent_source_count"] == (1 if first_hand else None)
+
+
+@pytest.mark.pit
+@pytest.mark.parametrize("same_source", [True, False])
+def test_origin_count_separate_from_verified_source_identity(setup_ledger, same_source):
+    ledger, clock, source, seed = setup_ledger
+    ledger.ingest(obs(clock, source, "官方原始材料A", is_first_hand=True), seed)
+    cutoff = clock()
+    before = ledger.origin_summary(as_of=cutoff, event_id=seed.event_id)
+    other = source
+    if not same_source:
+        other = ledger.register_source(Source.model_validate({**source.model_dump(),
+            "object_id": "SECOND_SOURCE", "source_id": "SECOND_SOURCE", "canonical_locator": "fixture:second"}))
+    observation = obs(clock, other, "官方原始材料B", is_first_hand=True)
+    observation = RawObservation.model_validate({**observation.model_dump(), "locator": "fixture:policy-b"})
+    ledger.ingest(observation, seed)
+    summary = ledger.origin_summary(as_of=clock(), event_id=seed.event_id)
+    assert summary["origin_count"] == 2
+    assert summary["independent_source_count"] == (1 if same_source else 2)
+    assert ledger.origin_summary(as_of=cutoff, event_id=seed.event_id) == before
+
+
+@pytest.mark.pit
+def test_origin_unverified_source_stays_hold_after_later_identity_verification(setup_ledger):
+    ledger, clock, source, seed = setup_ledger
+    unverified = ledger.register_source(Source.model_validate({**source.model_dump(),
+        "object_id": "UNKNOWN_SOURCE", "source_id": "UNKNOWN_SOURCE", "identity_status": "UNVERIFIED"}))
+    ledger.ingest(obs(clock, unverified, is_first_hand=True), seed)
+    cutoff = clock()
+    before = ledger.origin_summary(as_of=cutoff, event_id=seed.event_id)
+    assert before == {"origin_count": 1, "independent_source_count": None, "status": "HOLD_INDEPENDENCE_UNKNOWN"}
+    clock.advance(minutes=30)
+    ledger.register_source(Source.model_validate({**unverified.model_dump(), "version": 2, "identity_status": "VERIFIED"}))
+    assert ledger.origin_summary(as_of=clock(), event_id=seed.event_id) == before
+    assert ledger.origin_summary(as_of=cutoff, event_id=seed.event_id) == before
+
+
+@pytest.mark.pit
+@pytest.mark.parametrize("classification", ["R1", "R2", "UNDETERMINED", "R3", "R4", "R5"])
+def test_material_update_timestamp_follows_novelty_without_backfill(setup_ledger, classification):
+    ledger, clock, source, seed = setup_ledger
+    fields = {"detail": "初始细节", "amount": "1", "legal_status": "draft", "retracted": "false"}
+    original = ledger.ingest(obs(clock, source, json.dumps(fields), structured_fields=fields,
+        structured_basis="SOURCE_STRUCTURED", is_first_hand=True), seed)
+    cutoff = clock()
+    before = ledger.replay(cutoff)
+    initial = ledger.history(as_of=cutoff, kind="EventVersion")[0]
+    assert initial.last_material_update_at == original.ready_at
+    clock.advance(minutes=30)
+    changes = {"R2": {"detail": "细节补充"}, "R3": {"amount": "2"},
+               "R4": {"legal_status": "law"}, "R5": {"retracted": "true"}}
+    if classification == "R1":
+        observation = obs(clock, source, "明确转载", origin_ref=VersionRef(**ref(original)))
+        observation = RawObservation.model_validate({**observation.model_dump(), "locator": "fixture:repost"})
+    elif classification == "UNDETERMINED":
+        observation = obs(clock, source, "无法确定是否实质更新", "2", change_type="EDIT")
+    else:
+        updated = {**fields, **changes[classification]}
+        observation = obs(clock, source, json.dumps(updated), "2", change_type="EDIT",
+            structured_fields=updated, structured_basis="SOURCE_STRUCTURED", is_first_hand=True)
+    evidence = ledger.ingest(observation, seed)
+    assert ledger.history(as_of=clock(), kind="NoveltyDecision")[-1].classification == classification
+    latest = ledger.history(as_of=clock(), kind="EventVersion")[-1]
+    assert latest.version == 2
+    if classification in ("R3", "R4", "R5"):
+        assert latest.last_material_update_at == evidence.ready_at > initial.last_material_update_at
+    else:
+        assert latest.last_material_update_at == initial.last_material_update_at < evidence.ready_at
+    assert ledger.replay(cutoff) == before
 
 
 @pytest.mark.pit
