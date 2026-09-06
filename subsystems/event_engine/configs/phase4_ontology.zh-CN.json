@@ -1,0 +1,21 @@
+{
+  "description_zh": "完全虚构的Phase4工程样例；不是正式行业分类、真实数据或股票研究",
+  "base_fixture": "offline_fixture.zh-CN.json",
+  "at": "2026-09-07T10:00:00+08:00",
+  "ontology": {
+    "version": 1,
+    "segments": [
+      {"industry_id": "XIND_MATERIALS", "canonical_name_zh": "材料产业", "parent_id": null, "level": 0, "economic_role": "ROOT", "description_zh": "虚构材料产业根节点", "effective_from": "2026-01-01T00:00:00Z"},
+      {"industry_id": "XIND_COPPER_MINING", "canonical_name_zh": "铜矿生产", "parent_id": "XIND_MATERIALS", "level": 1, "economic_role": "PRODUCTION", "description_zh": "产出铜资源的产业环节", "effective_from": "2026-01-01T00:00:00Z"},
+      {"industry_id": "XIND_COPPER_USERS", "canonical_name_zh": "高耗铜制造", "parent_id": "XIND_MATERIALS", "level": 1, "economic_role": "MANUFACTURING", "description_zh": "以铜为重要投入的制造活动", "effective_from": "2026-01-01T00:00:00Z"}
+    ],
+    "aliases": [],
+    "crosswalks": [
+      {"crosswalk_id": "fixture-000001", "external_system": "PROVIDER", "provider_name": "虚构分类样例", "external_code": "000001", "external_name": "虚构铜资源类别", "x_industry_id": "XIND_COPPER_MINING", "mapping_type": "RELATED", "mapping_status": "CANDIDATE", "provenance_zh": "仅人工fixture，不声明真实外部分类授权或对应关系"}
+    ],
+    "rules": [
+      {"rule_id": "copper-price-producer", "variable_type": "PRICE", "target_object": "COPPER", "direction": "UP", "industry_id": "XIND_COPPER_MINING", "impact_direction": "POSITIVE", "path_role": "PRODUCER", "mechanism_zh": "铜价上涨可能提高生产端单位收入；仍取决于销量和成本", "mapping_status": "CANDIDATE"},
+      {"rule_id": "copper-price-user", "variable_type": "PRICE", "target_object": "COPPER", "direction": "UP", "industry_id": "XIND_COPPER_USERS", "impact_direction": "NEGATIVE", "path_role": "INPUT_USER", "mechanism_zh": "铜价上涨可能增加投入成本；仍取决于库存、合同和转嫁能力", "mapping_status": "CANDIDATE"}
+    ]
+  }
+}

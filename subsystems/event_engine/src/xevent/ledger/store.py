@@ -16,8 +16,9 @@ from ..discovery.novelty import POLICY_VERSION, classify
 from . import contracts as c
 from .schema import batches, metadata, migrate, publications, raw_archive, receipts, records
 from ..states.contracts import SCHEMAS as STATE_SCHEMAS
+from ..ontology.contracts import SCHEMAS as ONTOLOGY_SCHEMAS
 
-MODELS = {**SCHEMAS, **STATE_SCHEMAS, **{name: getattr(c, name) for name in (
+MODELS = {**SCHEMAS, **STATE_SCHEMAS, **ONTOLOGY_SCHEMAS, **{name: getattr(c, name) for name in (
     "EventLedgerEntry", "EvidenceChange", "OriginClusterVersion", "NoveltyDecision",
     "CollectorCursor", "OutboxJob", "SourceHealth")}}
 
