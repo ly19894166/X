@@ -1,4 +1,4 @@
-name: Event Engine Phase 2
+name: Event Engine Phase 3
 
 on:
   pull_request:
@@ -36,7 +36,7 @@ jobs:
         run: python -m pip install --no-build-isolation --no-deps -e .
       - name: 依赖一致性
         run: python -m pip check
-      - name: Phase 1 + Phase 2 focused tests
+      - name: Phase 1 + Phase 2 + Phase 3 focused tests
         run: python -m pytest -q
       - name: PIT tests 单独报告
         run: python -m pytest -q -m pit
@@ -46,3 +46,5 @@ jobs:
         run: x-event ledger-ingest --db phase2-ci.sqlite --fixture configs/phase2_observations.zh-CN.json
       - name: Phase 2 Replay
         run: x-event ledger-replay --db phase2-ci.sqlite --as-of 2099-01-01T00:00:00Z
+      - name: Phase 3 三维状态中文fixture与PIT回放
+        run: x-event state-fixture --db phase3-ci.sqlite --fixture configs/phase3_states.zh-CN.json
