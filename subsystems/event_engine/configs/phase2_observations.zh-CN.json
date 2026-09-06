@@ -1,0 +1,89 @@
+{
+  "source": {
+    "object_id": "SRC_虚构机构",
+    "version": 1,
+    "schema_version": "X_EVENT_V0.1",
+    "recorded_at": "2020-01-01T00:00:00Z",
+    "available_at": "2020-01-01T00:00:00Z",
+    "effective_from": null,
+    "effective_to": null,
+    "supersedes_version": null,
+    "evidence_refs": [],
+    "input_version_refs": [],
+    "run_id": "FIXTURE_离线_001",
+    "policy_version": "PHASE1_V0.1",
+    "status": "READY",
+    "reason_codes": [],
+    "content_hash": "9315cbbdf53239283e7276981ff9cd01fb8e5aae19bb4821a6f949171e5fea6b",
+    "mode": "LIVE_FORWARD",
+    "public_pit": null,
+    "source_id": "SRC_虚构机构",
+    "name_zh": "离线虚构政策机构",
+    "platform": "OFFLINE",
+    "canonical_locator": "fixture:source",
+    "identity_status": "UNVERIFIED",
+    "tier": "S0",
+    "roles": [
+      "FACT",
+      "NARRATIVE"
+    ],
+    "access_method": "仅本地fixture",
+    "retention_policy": "仅虚构测试内容",
+    "enabled": false,
+    "terms_status": "UNKNOWN",
+    "authorization_status": "UNKNOWN",
+    "allowed_uses": null,
+    "raw_retention_allowed": null,
+    "access_restrictions": null
+  },
+  "event_seed": {
+    "event_id": "EV_PHASE2_FIXTURE",
+    "title_zh": "虚构政策文件的版本历史",
+    "dna": {
+      "actor_refs": [],
+      "action_code": "PROPOSE_PILOT",
+      "object_entities": [
+        {
+          "entity_id": "OBJ_POWER_PILOT",
+          "entity_type": "OBJECT",
+          "name_zh": "算力供电试点"
+        }
+      ],
+      "target_entities": [],
+      "domain_ids": [
+        "DATACENTER_POWER"
+      ],
+      "geographic_scope": [
+        "CN"
+      ],
+      "temporal_scope": "试点时间未定",
+      "identity_rule_version": "DNA_V0.1"
+    }
+  },
+  "observations": [
+    {
+      "locator": "fixture:policy",
+      "raw_text": "虚构政策原文",
+      "content_version": "1",
+      "change_type": "INITIAL",
+      "first_seen_at": "2020-01-01T10:00:01+08:00",
+      "collected_at": "2020-01-01T10:00:02+08:00"
+    },
+    {
+      "locator": "fixture:policy",
+      "raw_text": "虚构政策编辑稿",
+      "content_version": "2",
+      "change_type": "EDIT",
+      "first_seen_at": "2020-01-01T10:30:01+08:00",
+      "collected_at": "2020-01-01T10:30:02+08:00"
+    },
+    {
+      "locator": "fixture:policy",
+      "raw_text": "",
+      "content_version": "3",
+      "change_type": "DELETE",
+      "first_seen_at": "2020-01-01T10:45:01+08:00",
+      "collected_at": "2020-01-01T10:45:02+08:00"
+    }
+  ]
+}

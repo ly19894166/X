@@ -5,3 +5,9 @@ __pycache__/
 build/
 dist/
 schema-output/
+*.sqlite
+*.sqlite-wal
+*.sqlite-shm
+*.db
+*.db-wal
+*.db-shm
