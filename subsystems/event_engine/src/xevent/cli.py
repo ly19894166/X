@@ -10,8 +10,9 @@ from .contracts import SCHEMAS
 from .contracts.bundle import OfflineFixture
 from .contracts.common import PITError, PITQuery
 from .states.contracts import SCHEMAS as STATE_SCHEMAS
+from .ontology.contracts import SCHEMAS as ONTOLOGY_SCHEMAS
 
-CLI_SCHEMAS = {**SCHEMAS, **STATE_SCHEMAS}
+CLI_SCHEMAS = {**SCHEMAS, **STATE_SCHEMAS, **ONTOLOGY_SCHEMAS}
 
 
 class ChineseParser(argparse.ArgumentParser):
@@ -43,8 +44,15 @@ def main(argv=None):
     states = sub.add_parser("state-fixture", help="执行Phase3虚构时间线；不联网、不接真实行情")
     states.add_argument("--db", type=Path, required=True, help="新的独立演示数据库")
     states.add_argument("--fixture", type=Path, required=True, help="Phase3中文虚构场景")
+    ontology = sub.add_parser("ontology-fixture", help="执行Phase4产业/主题独立fixture；不做公司或股票")
+    ontology.add_argument("--db", type=Path, required=True, help="新的隔离演示数据库")
+    ontology.add_argument("--fixture", type=Path, required=True, help="Phase4中文本体fixture")
     args = parser.parse_args(argv)
     try:
+        if args.command == "ontology-fixture":
+            from .ontology.fixture import run_fixture
+            print(json.dumps(run_fixture(args.fixture, args.db), ensure_ascii=False, indent=2))
+            return 0
         if args.command == "state-fixture":
             from .runtime.state_fixture import run_fixture
             print(json.dumps(run_fixture(args.fixture, args.db), ensure_ascii=False, indent=2))

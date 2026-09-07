@@ -16,8 +16,10 @@ from ..discovery.novelty import POLICY_VERSION, classify
 from . import contracts as c
 from .schema import batches, metadata, migrate, publications, raw_archive, receipts, records
 from ..states.contracts import SCHEMAS as STATE_SCHEMAS
+from ..ontology.contracts import SCHEMAS as ONTOLOGY_SCHEMAS
+from ..ontology.compatibility import project_legacy_record
 
-MODELS = {**SCHEMAS, **STATE_SCHEMAS, **{name: getattr(c, name) for name in (
+MODELS = {**SCHEMAS, **STATE_SCHEMAS, **ONTOLOGY_SCHEMAS, **{name: getattr(c, name) for name in (
     "EventLedgerEntry", "EvidenceChange", "OriginClusterVersion", "NoveltyDecision",
     "CollectorCursor", "OutboxJob", "SourceHealth")}}
 
@@ -118,7 +120,7 @@ class Ledger:
             if cached and cached[0] == cache_key:
                 obj = cached[1]
             else:
-                obj = model.model_validate({**payload, **common})
+                obj = model.model_validate({**project_legacy_record(row["kind"], payload, key[0]), **common})
                 obj = model.model_validate({**obj.model_dump(), "content_hash": content_digest(obj)})
                 self._validated[key] = (cache_key, obj)
             if isinstance(obj, EvidenceVersion):
