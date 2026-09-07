@@ -1,4 +1,4 @@
-name: Event Engine Phase 4
+name: Event Engine Phase 5
 
 on:
   pull_request:
@@ -36,7 +36,7 @@ jobs:
         run: python -m pip install --no-build-isolation --no-deps -e .
       - name: 依赖一致性
         run: python -m pip check
-      - name: Phase 1–4 focused tests
+      - name: Phase 1–5 full tests
         run: python -m pytest -q
       - name: PIT tests 单独报告
         run: python -m pytest -q -m pit
@@ -50,3 +50,5 @@ jobs:
         run: x-event state-fixture --db phase3-ci.sqlite --fixture configs/phase3_states.zh-CN.json
       - name: Phase 4 影响变量与产业本体中文fixture
         run: x-event ontology-fixture --db phase4-ci.sqlite --fixture configs/phase4_ontology.zh-CN.json
+      - name: Phase 5 公司证券与披露覆盖中文fixture
+        run: x-event exposure-fixture --db phase5-ci.sqlite --fixture configs/phase5_exposures.zh-CN.json
