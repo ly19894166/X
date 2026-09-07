@@ -3,9 +3,9 @@ from ..contracts import EventVersion, EvidenceVersion
 from ..contracts.common import PITQuery, TypeAdapter, UTCDateTime, VersionRef
 from ..ledger.store import digest, ref
 from .contracts import (AliasResolution, ExternalCrosswalk, ImpactSpec, ImpactVariable, IndustryAlias,
-    IndustryImpactRule, IndustrySegment, NarrativeTheme, OntologyDraft, OntologyVersion, phrase_key)
+    IndustryImpactRule, IndustrySegment, NarrativeTheme, ThemeIndustryRelation, OntologyDraft, OntologyVersion, phrase_key)
+from .compatibility import POLICY, combine_impact_directions
 
-POLICY = "X_ONTOLOGY_RULES_V0.1"
 
 
 def key(r):
@@ -129,7 +129,7 @@ class OntologyEngine:
                     raise ValueError("OBSERVED_QUOTE：核验引用不在原文中")
             inputs = refs([spec.event_ref, *spec.evidence_refs, *spec.premise_refs, *([old] if old else [])])
             self.ledger._put(conn, batch, "ImpactVariable", impact_id, version,
-                {**spec.model_dump(mode="json"), "policy_version": POLICY,
+                {**spec.model_dump(mode="json"), "impact_id": impact_id, "policy_version": POLICY,
                  "supersedes_version": old.version if old else None}, inputs)
         self.ledger._write(f"IMPACT:{impact_id}:{version}", digest(spec.model_dump(mode="json")), build)
         return self.ledger.get(impact_id, version)
@@ -175,6 +175,33 @@ class OntologyEngine:
         return AliasResolution(phrase=phrase, as_of=cutoff, ontology_ref=ref(ontology) if ontology else None,
             industry_ref=ref(matched) if matched else None, alias_refs=refs(aliases),
             mapping_status="MATCHED" if matched else "UNRESOLVED", reason_zh="精确别名解析" if matched else "未知或歧义产业；不作模糊猜测")
+
+    def theme_relation(self, relation_id, version, *, theme_ref, ontology_ref, industry_ref,
+                       evidence_refs, mechanism_zh):
+        payload = dict(theme_ref=ref(theme_ref), ontology_ref=ref(ontology_ref),
+            industry_ref=ref(industry_ref) if industry_ref else None, evidence_refs=refs(evidence_refs),
+            relation_status="ASSOCIATED" if industry_ref else "UNRESOLVED", mechanism_zh=mechanism_zh, policy_version=POLICY)
+        def build(conn, view, batch):
+            cutoff = self.ledger.now()
+            old = self._next(view, relation_id, version, ThemeIndustryRelation)
+            theme = self._input(view, theme_ref, NarrativeTheme, cutoff)
+            ontology = self._input(view, ontology_ref, OntologyVersion, cutoff)
+            if old and old.theme_ref != theme_ref:
+                raise ValueError("THEME_RELATION_ID：同关系ID不得更换主题固定版本")
+            if industry_ref:
+                self._input(view, industry_ref, IndustrySegment, cutoff)
+                if industry_ref not in ontology.segment_refs:
+                    raise ValueError("THEME_ONTOLOGY：目标不属于指定本体版本")
+            event = self._input(view, theme.event_ref, EventVersion, cutoff)
+            for r in evidence_refs:
+                self._input(view, r, EvidenceVersion, cutoff)
+                if r not in event.evidence_refs:
+                    raise ValueError("THEME_SCOPE：关联证据不属于主题的固定事件版本")
+            inputs = refs([theme, ontology, *evidence_refs, *([industry_ref] if industry_ref else []), *([old] if old else [])])
+            self.ledger._put(conn, batch, "ThemeIndustryRelation", relation_id, version,
+                {**payload, "supersedes_version":old.version if old else None}, inputs)
+        self.ledger._write(f"THEME_RELATION:{relation_id}:{version}", digest(payload), build)
+        return self.ledger.get(relation_id, version)
 
     def crosswalk(self, crosswalk_id, ontology_ref, *, as_of):
         cutoff = TypeAdapter(UTCDateTime).validate_python(as_of)
@@ -231,14 +258,19 @@ class OntologyEngine:
                 self.ledger._put(conn, batch, "IndustryImpactCandidate", out["object_id"], 1,
                     dict(impact_ref=ref(impact), ontology_ref=ref(ontology), ontology_version=ontology.ontology_version,
                         industry_ref=ref(industry) if industry else None, rule_ref=ref(rule) if rule else None,
-                        impact_direction=rule.impact_direction if rule else "UNCERTAIN", path_role=rule.path_role if rule else "UNRESOLVED",
+                        impact_direction=rule.impact_direction if rule else "UNKNOWN", path_role=rule.path_role if rule else "UNRESOLVED",
                         mapping_status=mapping_status, mechanism_zh=rule.mechanism_zh if rule else "无对应的可知规则；保留未解析经济路径",
                         uncertainty_zh=impact.uncertainty_zh or "确定性规则仅给出经济影响候选，尚未验证实际效果",
                         evidence_refs=evidence, policy_version=POLICY), inputs)
                 outputs.append(out)
+            targets = {}
+            for rule, industry in candidates or [(None, None)]:
+                targets.setdefault(key(industry) if industry else None, []).append(rule.impact_direction if rule else "UNKNOWN")
+            directions = [dict(industry_ref=dict(object_id=k[0], version=k[1]) if k else None,
+                               impact_direction=combine_impact_directions(values)) for k, values in sorted(targets.items(), key=lambda item:str(item[0]))]
             self.ledger._put(conn, batch, "IndustryResolution", identity, 1,
                 dict(impact_ref=ref(impact), ontology_ref=ref(ontology), as_of=cutoff.isoformat(),
-                     candidate_refs=outputs, policy_version=POLICY), [ref(impact), ref(ontology), *outputs])
+                     candidate_refs=outputs, industry_directions=directions, policy_version=POLICY), [ref(impact), ref(ontology), *outputs])
             self.ledger.fault("after_industry_resolution")
         self.ledger._write(identity, digest([ref(impact_ref), ref(ontology_ref), cutoff.isoformat(), POLICY]), build)
         return self.ledger.get(identity, 1)

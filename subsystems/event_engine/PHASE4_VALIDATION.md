@@ -6,21 +6,38 @@
 
 ## 本地原始测试
 
+本节为PR #20机器契约Review修订后的结果，修订基线`82728ab8272a6468043587fec78d4eee6787a023`。
+原294/97结果只代表修订前提交。正式契约修订见SPEC_AMENDMENT_COMPATIBILITY_V0.1_A1.md。
+
 Windows / CPython 3.11.9；复用Phase2虚拟环境，PYTHONPATH指向本工作树src。没有安装或更新依赖。
 
 ```text
-python -m pytest -q tests/test_phase4_ontology.py
-64 passed in 13.37s
+python -m pytest -q tests/test_phase4_ontology.py tests/test_phase4_review.py
+80 passed in 15.51s
 
 python -m pytest -q
-294 passed in 108.84s (0:01:48)
+310 passed in 102.17s (0:01:42)
 
 python -m pytest -q -m pit
-97 passed, 197 deselected in 28.50s
+102 passed, 208 deselected in 27.44s
 ```
 
-294 = Phase1–3既有230项 + Phase4新增64项；97项PIT为总数子集（原87 + 本次10）。
-9个新增版本Schema可生成JSON Schema；新增及既有历史JSON round-trip通过；全部测试由既有fixture禁止真实socket。
+310 = Phase1–3既有230项 + Phase4当前80项；本轮增加15个Review测试实例及1个关系Schema导出实例。
+102项PIT为总数子集（本轮新增5项）。10个版本Schema及FrozenOntologyView可生成JSON Schema；
+新增及既有历史JSON round-trip通过；全部测试由既有fixture禁止真实socket。
+
+## 本轮三个阻塞项
+
+| Review要求 | 机器实现与测试 |
+|---|---|
+| impact_id及冻结研究字段 | impact_id=object_id，scope/magnitude/start/persistence未知保留UNKNOWN；test_impact_identity_scope_bands_schema_roundtrip_pit |
+| 旧名称与历史兼容 | 显式normalize_impact_input拒绝双字段；test_old_names_only_at_explicit_compatibility_boundary；test_legacy_record_projection_never_rewrites_payload_or_time验证原存储不改写/不回填 |
+| 正负/混合/未知/中性五态 | test_frozen_impact_direction_semantics七例；test_same_target_positive_negative_is_mixed_with_paths_retained保留原正负路径并汇总MIXED；test_uncertain_projection_is_restricted_to_known_legacy_policy |
+| 正规化关系的冻结视图 | ThemeIndustryRelation唯一存储，按固定本体/as_of导出；test_frozen_view_roundtrip_later_theme_relation_and_crosswalk覆盖晚到关系、撤回、crosswalk修订及旧时点不变 |
+| 无损证据与防双源漂移 | test_roundtrip_preserves_additional_relation_evidence保留主题和后来关系的不同证据；test_frozen_view_rejects_drifting_duplicate_projection拒绝人为改动冗余投影 |
+
+冻结视图只导出/还原正规化对象，不写入第二份历史表。旧记录按已知策略读取投影，原payload/hash/回执不变；
+投影模型hash可能与旧软件导出不同，此边界明确记录于A1 amendment。无批量旧库迁移。
 
 ## Issue #9测试对应
 

@@ -17,7 +17,9 @@ Target = Literal["COPPER", "ELECTRICITY", "AI_COMPUTE", "MANUFACTURING", "CURREN
 Geography = Literal["GLOBAL", "CN", "US", "EU", "JP", "UNKNOWN"]
 Currency = Literal["USD", "CNY", "EUR", "JPY", "GBP", "HKD"]
 Unit = Literal["TONNE", "CNY_PER_TONNE", "USD_PER_TONNE", "KWH", "COUNT", "PERCENT", "FX_RATE", "UNKNOWN"]
-ImpactDirection = Literal["POSITIVE", "NEGATIVE", "NEUTRAL", "UNCERTAIN"]
+ImpactDirection = Literal["POSITIVE", "NEGATIVE", "MIXED", "NEUTRAL", "UNKNOWN"]
+StartHorizon = Literal["IMMEDIATE", "MINUTES", "HOURS", "DAYS", "WEEKS", "MONTHS", "UNKNOWN"]
+PersistenceBand = Literal["MINUTES", "HOURS", "OVERNIGHT", "ONE_TO_THREE_SESSIONS", "MEDIUM_TERM", "STRUCTURAL", "UNKNOWN"]
 PathRole = Literal["PRODUCER", "INPUT_USER", "CUSTOMER", "SUPPLIER", "SUBSTITUTE", "UNRESOLVED"]
 MappingStatus = Literal["CANDIDATE", "VERIFIED", "HOLD", "UNRESOLVED"]
 EconomicRole = Literal["ROOT", "PRODUCTION", "PROCESSING", "MANUFACTURING", "INFRASTRUCTURE", "SERVICE"]
@@ -62,6 +64,10 @@ class ImpactSpec(Contract):
     target_object: Target
     direction: Direction
     geography: Geography
+    scope: Literal["TARGET_MARKET", "INDUSTRY_ACTIVITY", "ECONOMY", "UNKNOWN"] = "UNKNOWN"
+    magnitude_band: Band = "UNKNOWN"
+    start_horizon: StartHorizon = "UNKNOWN"
+    persistence_band: PersistenceBand = "UNKNOWN"
     unit: Unit = "UNKNOWN"
     currency: Currency | None = None
     fx_pair: CurrencyPair | None = None
@@ -99,8 +105,12 @@ class ImpactSpec(Contract):
 
 
 class ImpactVariable(DerivedEnvelope, ImpactSpec):
+    impact_id: Text
+
     @model_validator(mode="after")
     def references(self):
+        if self.impact_id != self.object_id:
+            raise ValueError("IMPACT_ID：impact_id必须等于稳定object_id，修订只追加version")
         require_input_refs(self, (self.event_ref, *self.premise_refs, *self.evidence_refs))
         return self
 
@@ -289,6 +299,26 @@ class NarrativeTheme(DerivedEnvelope):
         return self
 
 
+class ThemeIndustryRelation(DerivedEnvelope):
+    theme_ref: VersionRef
+    ontology_ref: VersionRef
+    industry_ref: VersionRef | None
+    relation_status: Literal["ASSOCIATED", "UNRESOLVED"]
+    mechanism_zh: Chinese
+
+    @model_validator(mode="after")
+    def references(self):
+        if (self.industry_ref is None) != (self.relation_status == "UNRESOLVED") or not self.evidence_refs:
+            raise ValueError("THEME_RELATION：关系状态/目标不一致或缺关联证据；不是经济暴露")
+        require_input_refs(self, (self.theme_ref, self.ontology_ref, *([self.industry_ref] if self.industry_ref else [])))
+        return self
+
+
+class IndustryDirectionSummary(Contract):
+    industry_ref: VersionRef | None
+    impact_direction: ImpactDirection
+
+
 class IndustryImpactCandidate(DerivedEnvelope):
     impact_ref: VersionRef
     industry_ref: VersionRef | None
@@ -319,6 +349,7 @@ class IndustryResolution(DerivedEnvelope):
     ontology_ref: VersionRef
     as_of: UTCDateTime
     candidate_refs: Items[VersionRef]
+    industry_directions: Items[IndustryDirectionSummary] = ()
 
     @model_validator(mode="after")
     def references(self):
@@ -337,4 +368,4 @@ class AliasResolution(Contract):
 
 
 SCHEMAS = {m.__name__: m for m in (ImpactVariable, IndustrySegment, IndustryAlias, ExternalCrosswalk,
-    IndustryImpactRule, OntologyVersion, NarrativeTheme, IndustryImpactCandidate, IndustryResolution)}
+    IndustryImpactRule, OntologyVersion, NarrativeTheme, ThemeIndustryRelation, IndustryImpactCandidate, IndustryResolution)}

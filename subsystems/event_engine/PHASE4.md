@@ -4,6 +4,9 @@
 接受基线：`build/x-event-engine-phase3` / `8469ea722e65cc0f6975b3be0ed88b5fb5d9767d`。
 独立stacked Draft PR以该分支为base；不合并或修改PR #19。只输出事件影响和产业候选。
 
+PR #20机器契约Review后，唯一字段与迁移边界见[SPEC_AMENDMENT_COMPATIBILITY_V0.1_A1.md](SPEC_AMENDMENT_COMPATIBILITY_V0.1_A1.md)。
+Impact显式impact_id=object_id，补scope、magnitude_band、start_horizon、persistence_band；未知均保留UNKNOWN。
+
 ## 范围和数据流
 
 ```text
@@ -67,6 +70,7 @@ HYPOTHESIS必须有固定Evidence/Impact premise_refs、mechanism_zh和uncertain
 | OntologyVersion | 一次发布的不可变manifest；固定引用全部segment/alias/crosswalk/rule版本 |
 | ImpactVariable | 事件影响，OBSERVED/HYPOTHESIS隔离；固定原文/前提引用 |
 | NarrativeTheme | 独立主题实体；没有industry_ref，经济路径固定UNRESOLVED |
+| ThemeIndustryRelation | 固定主题/本体/产业的叙事关联及证据；不代表经济暴露，冻结视图按as_of导出 |
 | IndustryImpactCandidate | 影响/本体/规则/产业固定引用、正负方向、机制、证据、领域状态和不确定性 |
 | IndustryResolution | 某次固定输入/as_of对应的候选集合 |
 
@@ -91,7 +95,8 @@ VERIFIED crosswalk/规则需已校验FACT证据、核验人和中文provenance/�
 
 `resolve(impact_ref, ontology_ref, as_of, request_key)`只按精确类型/目标/方向/地区及币种对选择规则。
 规则地区GLOBAL表示该机制适用各已知地区，不代表证据是全球覆盖；影响地区UNKNOWN不能被当成GLOBAL。
-产出保留PRODUCER/INPUT_USER等path_role与POSITIVE/NEGATIVE/NEUTRAL/UNCERTAIN方向。
+产出保留PRODUCER/INPUT_USER等path_role与POSITIVE/NEGATIVE/MIXED/NEUTRAL/UNKNOWN方向。
+同一目标的正负路径保留原记录，并在IndustryResolution.industry_directions汇总为MIXED；未知不等于中性。
 铜价上涨fixture同时输出铜矿生产POSITIVE和高耗铜制造NEGATIVE；不只保留“受益者”。
 
 无规则/未知地区方向/仅主题前提/目标行业不在有效期时，输出一条industry_ref=null的UNRESOLVED记录。
@@ -106,7 +111,7 @@ VERIFIED crosswalk/规则需已校验FACT证据、核验人和中文provenance/�
 ## 事务与PIT
 
 复用Phase2五表SQLite Ledger、WAL、append-only触发器、业务提交后回执和publication fence。
-仅在Ledger模型注册表增加9种Phase4记录；不重构Phase1–3，无DB schema迁移或新依赖。
+Phase4共10种版本记录；不重构Phase1–3，无DB schema迁移或新依赖。旧Phase4记录仅按A1说明作读取投影，不改原payload/时间。
 本体成员与manifest同事务；候选与resolution同事务。回滚无半份树/候选，提交后崩溃沿已有回执协议恢复。
 recorded_at继续代表耐久化业务提交完成；available_at覆盖输入、计算及提交/发布门槛。
 
