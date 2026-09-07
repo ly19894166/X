@@ -18,8 +18,10 @@ from .schema import batches, metadata, migrate, publications, raw_archive, recei
 from ..states.contracts import SCHEMAS as STATE_SCHEMAS
 from ..ontology.contracts import SCHEMAS as ONTOLOGY_SCHEMAS
 from ..ontology.compatibility import project_legacy_record
+from ..registry.contracts import SCHEMAS as REGISTRY_SCHEMAS
+from ..exposures.contracts import SCHEMAS as EXPOSURE_SCHEMAS
 
-MODELS = {**SCHEMAS, **STATE_SCHEMAS, **ONTOLOGY_SCHEMAS, **{name: getattr(c, name) for name in (
+MODELS = {**SCHEMAS, **STATE_SCHEMAS, **ONTOLOGY_SCHEMAS, **REGISTRY_SCHEMAS, **EXPOSURE_SCHEMAS, **{name: getattr(c, name) for name in (
     "EventLedgerEntry", "EvidenceChange", "OriginClusterVersion", "NoveltyDecision",
     "CollectorCursor", "OutboxJob", "SourceHealth")}}
 
