@@ -4,7 +4,7 @@ from ..contracts.common import TypeAdapter, UTCDateTime
 from ..ledger.store import digest, ref
 from ..ontology.contracts import IndustrySegment, NarrativeTheme
 from ..registry.contracts import Company, SecurityVersion, ResearchUniverseSnapshot, POLICY
-from ..registry.engine import Registry, key, refs, latest, effective
+from ..registry.engine import Registry, key, refs, latest
 from .contracts import (DisclosureSpec, DisclosureImport, ExposureSpec, CompanyExposure, MetricSpec,
     ExposureMetric, CoverageReport, DIRECT_TYPES, metric_result)
 
@@ -39,8 +39,12 @@ class ExposureMaster(Registry):
                 raise ValueError("EXPOSURE_PROVENANCE：证据类型/引用必须来自指定披露版本")
             if spec.industry_ref:
                 industry = self.input(view,spec.industry_ref,IndustrySegment)
-                if not effective(industry,self.ledger.now()):
-                    raise ValueError("EXPOSURE_INDUSTRY：产业版本当前不可用")
+                # 知识可用性由固定输入版本和Ledger提交门槛保证；现实适用性只看两段现实区间。
+                # 左闭右开，未知端点开放；产业退役不能阻止后来披露的合法历史业务。
+                if ((industry.effective_to is not None and spec.effective_from >= industry.effective_to) or
+                    (industry.effective_from is not None and spec.effective_to is not None and
+                     industry.effective_from >= spec.effective_to)):
+                    raise ValueError("EXPOSURE_INDUSTRY_INTERVAL：产业与业务现实区间无重叠")
             if spec.narrative_theme_ref:
                 self.input(view,spec.narrative_theme_ref,NarrativeTheme)
             if disclosure.disclosure_type == "NARRATIVE" and spec.exposure_type not in ("NARRATIVE_ASSOCIATION","UNKNOWN","HOLD"):
@@ -72,11 +76,23 @@ class ExposureMaster(Registry):
         payload = Payload(**spec.model_dump(),value=result[0],result_status=result[1],metric_reason_codes=tuple(result[2]))
         def validate(view,old):
             exposure = self.input(view,spec.exposure_ref,CompanyExposure)
-            self.input(view,spec.evidence_ref,EvidenceVersion)
+            evidence = self.input(view,spec.evidence_ref,EvidenceVersion)
             if spec.evidence_ref not in exposure.evidence_refs or spec.period != exposure.reporting_period:
                 raise ValueError("METRIC_EVIDENCE：指标必须来自该暴露披露及报告期")
             if spec.validation_status == "VERIFIED" and exposure.exposure_type not in ("VERIFIED_DIRECT","SUPPORTED_DIRECT"):
                 raise ValueError("METRIC_VERIFICATION：叙事/推断/未知暴露不得携带已核实经济指标")
+            if spec.validation_status == "VERIFIED":
+                disclosure = self.input(view,exposure.source_disclosure_ref,DisclosureImport)
+                if (evidence.claim_kind != "FACT" or evidence.quality_status != "VALIDATED" or
+                    evidence.is_first_hand is not True or
+                    evidence.evidence_type not in ("COMPANY_DISCLOSURE","OFFICIAL_DOCUMENT","UNKNOWN") or
+                    disclosure.disclosure_type not in DIRECT_TYPES or
+                    disclosure.review_status != "MANUALLY_VERIFIED" or not disclosure.issuer_identity_verified):
+                    raise ValueError("METRIC_FACT_PROOF：VERIFIED需已核验正式披露及一手FACT/VALIDATED证据；新闻保留SUPPORTED/HOLD")
+                raw = self.ledger.raw(evidence.raw_object_ref).decode("utf-8",errors="strict")
+                for span in (spec.numerator_source_span,spec.denominator_source_span):
+                    if span is not None and not span.matches_raw(raw):
+                        raise ValueError("METRIC_RAW_PROVENANCE：不可变raw中找不到完整数值及对应原文片段")
             if old and (old.metric_type != spec.metric_type or old.exposure_ref.object_id != spec.exposure_ref.object_id or
                 old.period != spec.period or old.scope != spec.scope or old.unit != spec.unit or old.currency != spec.currency):
                 raise ValueError("METRIC_ID：同指标ID不能改变类型/公司暴露/期间/范围/单位/币种")

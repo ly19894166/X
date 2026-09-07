@@ -176,17 +176,25 @@ def test_share_types_preserved_not_converted(disclosed,kind):
     ({"numerator":None},"NUMERATOR_MISSING"),({"denominator":None},"DENOMINATOR_MISSING"),
     ({"numerator":-30.0,"metric_type":"PROFIT_SHARE"},"NEGATIVE_COMPONENT_NOT_A_SHARE"),
     ({"numerator":130.0},"SHARE_OUT_OF_RANGE"),({"basis_verified_by":None},"RATIO_BASIS_UNVERIFIED")])
-def test_invalid_ratio_not_zero(disclosed,changes,reason):
-    w,d,x=disclosed
+def test_invalid_ratio_not_zero(w,changes,reason):
+    at(w,"2026-03-28T00:00:00Z")
+    raw="虚构甲公司拥有铜矿；收入"+str(changes.get("numerator",30.0))+"，总收入"+str(changes.get("denominator",100.0))
+    # 异常值本身也要有原文；未知值仍为null，不假造数字。
+    raw=raw.replace(".0","")
+    d=disclose(w,raw_text=raw)
+    x=w["master"].exposure(1,exposure(w,d))
     m=w["master"].metric(1,metric(x,**changes))
     assert m.value is None and m.result_status in ("UNDEFINED","HOLD")
     assert reason in m.metric_reason_codes
 
 
-def test_negative_profit_amount_is_not_invalid_ratio(disclosed):
-    w,d,x=disclosed
+def test_negative_profit_amount_is_not_invalid_ratio(w):
+    at(w,"2026-03-28T00:00:00Z")
+    d=disclose(w,raw_text="虚构甲公司拥有铜矿；营业利润-30")
+    x=w["master"].exposure(1,exposure(w,d))
     m=w["master"].metric(1,metric(x,metric_type="OPERATING_PROFIT",numerator=-30.0,denominator=None,
-        calculation_method="REPORTED_AMOUNT",unit="CNY",denominator_basis=None))
+        calculation_method="REPORTED_AMOUNT",unit="CNY",denominator_basis=None,
+        numerator_source_span=dict(quote="营业利润-30",basis_text="营业利润",value_text="-30",value_offset=4)))
     assert m.value==-30.0 and m.result_status=="DEFINED"
 
 

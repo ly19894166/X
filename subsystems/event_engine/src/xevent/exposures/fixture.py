@@ -69,11 +69,13 @@ def add_security(w,identity="SEC_A",**changes):
     return s
 
 
-def disclose(w,version=1,**changes):
+def disclose(w,version=1,*,raw_text=None,**changes):
     clock=w["clock"]
     raw="虚构甲公司年报：拥有铜矿，收入30，总收入100，铜产量20；人工核实归属及计量口径"
     if version > 1:
         raw="虚构甲公司更正年报：拥有铜矿，收入20，总收入100，铜产量20；人工核实归属及计量口径"
+    if raw_text is not None:
+        raw=raw_text
     evidence=w["ledger"].ingest(RawObservation(source_ref=ref(w["source"]),locator="fixture:annual",
         raw=raw.encode(),first_seen_at=clock(),collected_at=clock(),published_at=clock.value,
         content_version=str(version),change_type="INITIAL" if version==1 else "EDIT",
@@ -104,7 +106,13 @@ def metric(exposure,**changes):
         numerator=30.0,denominator=100.0,unit="RATIO",currency="CNY",period=exposure.reporting_period,scope="合并报表",
         evidence_ref=exposure.evidence_refs[0],calculation_method="SAME_BASIS_RATIO",validation_status="VERIFIED",
         numerator_basis="同期间铜矿业务收入",denominator_basis="同期间同币种合并营业收入",basis_verified_by="fixture核验者")
-    return MetricSpec.model_validate({**fields,**changes})
+    fields.update(changes)
+    for name,basis in (("numerator","收入"),("denominator","总收入")):
+        value=fields[name]
+        number=format(value,"g") if value is not None else None
+        fields.setdefault(name+"_source_span",dict(quote=basis+number,basis_text=basis,
+            value_text=number,value_offset=len(basis)) if number is not None else None)
+    return MetricSpec.model_validate(fields)
 
 
 def run_fixture(path,db):

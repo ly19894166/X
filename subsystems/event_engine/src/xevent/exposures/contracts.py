@@ -1,6 +1,7 @@
 """披露、暴露和独立指标：现实期间不等于知识时间。"""
-from typing import Literal
-from pydantic import model_validator
+from decimal import Decimal
+from typing import Annotated, Literal
+from pydantic import Field, model_validator
 from ..contracts.common import Contract, DerivedEnvelope, Items, Text, UTCDateTime, VersionRef, Count
 from ..contracts.models import identity_matches, require_input_refs
 from ..registry.contracts import Day, EffectiveSpec, RegistryEnvelope, Provenance
@@ -69,7 +70,7 @@ class ExposureSpec(EffectiveSpec):
     validation_status: ValidationStatus
     mechanism_zh: Text
     description_zh: Text
-    mapping_method: Literal["MANUAL_VERIFIED", "EXACT_ALIAS_REVIEWED", "VERIFIED_RULE", "KEYWORD_CANDIDATE", "UNKNOWN"]
+    mapping_method: Literal["MANUAL_VERIFIED", "KEYWORD_CANDIDATE", "UNKNOWN"]
     mapping_review_zh: Text
     narrative_theme_ref: VersionRef | None = None
 
@@ -77,7 +78,7 @@ class ExposureSpec(EffectiveSpec):
     def exposure_gate(self):
         if self.exposure_type == "VERIFIED_DIRECT" and (
             self.evidence_type not in DIRECT_TYPES or self.validation_status != "VERIFIED" or
-            self.mapping_method not in ("MANUAL_VERIFIED","EXACT_ALIAS_REVIEWED","VERIFIED_RULE") or not self.reviewed_by):
+            self.mapping_method != "MANUAL_VERIFIED" or not self.reviewed_by):
             raise ValueError("DIRECT_PROOF：直接核实暴露需要正式披露及明确业务映射核验")
         if self.exposure_type in ("VERIFIED_DIRECT","SUPPORTED_DIRECT","INFERRED") and self.industry_ref is None:
             raise ValueError("EXPOSURE_INDUSTRY：经济暴露必须固定产业版本；未知产业保留UNKNOWN")
@@ -102,6 +103,37 @@ class CompanyExposure(ExposureSpec, RegistryEnvelope):
         return self
 
 
+class MetricSourceSpan(Contract):
+    quote: Text = Field(description="不可变原文中的完整片段，包含数字和口径")
+    basis_text: Text = Field(description="该片段中的原文口径；人工解释不能代替原文")
+    value_text: Annotated[str, Field(pattern=r"^-?(0|[1-9][0-9]*)(\.[0-9]+)?$")] = Field(
+        description="原样十进制数字，不隐式缩放、去千分位或转换百分号")
+    value_offset: Count = Field(description="数字在quote中的Unicode字符起始位置，从0计数")
+
+    @model_validator(mode="after")
+    def span_gate(self):
+        start, end = self.value_offset, self.value_offset + len(self.value_text)
+        if self.quote[start:end] != self.value_text or self.basis_text not in self.quote:
+            raise ValueError("METRIC_SOURCE_SPAN：片段必须包含原文口径及精确数值定位")
+        # 不允许把130中的30、-30中的30或1,000中的000截成所需数值。
+        if (start and self.quote[start-1] in "0123456789.,+-") or (
+            end < len(self.quote) and self.quote[end] in "0123456789.,%％eE"):
+            raise ValueError("METRIC_SOURCE_TOKEN：必须引用完整数字；换算/格式化数值须另行核验")
+        return self
+
+    def matches_raw(self, raw):
+        # 还要检查quote之外的原文边界，防止把30%裁剪成一个看似完整的“收入30”片段。
+        offset = raw.find(self.quote)
+        while offset >= 0:
+            start = offset + self.value_offset
+            end = start + len(self.value_text)
+            if not ((start and raw[start-1] in "0123456789.,+-") or
+                (end < len(raw) and raw[end] in "0123456789.,%％eE")):
+                return True
+            offset = raw.find(self.quote,offset+1)
+        return False
+
+
 class MetricSpec(Contract):
     metric_id: Text
     exposure_ref: VersionRef
@@ -118,6 +150,8 @@ class MetricSpec(Contract):
     numerator_basis: Text
     denominator_basis: Text | None
     basis_verified_by: Text | None = None
+    numerator_source_span: MetricSourceSpan | None = None
+    denominator_source_span: MetricSourceSpan | None = None
 
     @model_validator(mode="after")
     def dimensional_gate(self):
@@ -132,6 +166,13 @@ class MetricSpec(Contract):
             raise ValueError("METRIC_CURRENCY：金额必须声明币种")
         if self.validation_status == "VERIFIED" and not self.basis_verified_by and not share:
             raise ValueError("METRIC_REVIEW：已核实金额/数量需要计量口径核验者")
+        for name in ("numerator", "denominator"):
+            value, span = getattr(self,name), getattr(self,name+"_source_span")
+            if value is None and span is not None:
+                raise ValueError("METRIC_SOURCE_SPAN：未知数值不能携带伪造的数字定位")
+            if self.validation_status == "VERIFIED" and value is not None:
+                if span is None or Decimal(span.value_text) != Decimal(str(value)):
+                    raise ValueError("METRIC_NUMERIC_PROVENANCE：VERIFIED数值必须与各自原文数字一致")
         return self
 
 

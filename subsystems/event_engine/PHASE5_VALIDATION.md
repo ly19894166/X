@@ -6,7 +6,7 @@
 本文件记录提交前本地验证，远端四组 CI 的最终结果与 job 链接记录在 Phase 5 Draft PR 正文，
 避免为了更新运行状态而重复触发同一代码的 CI。
 
-## 原始结果
+## 初始提交83066d5的原始结果（Review后结果见文末）
 
 Windows / Python 3.11，复用独立 Event Engine 已锁环境，通过 PYTHONPATH 指向本分支 src。
 
@@ -71,3 +71,42 @@ Schema/JSON round-trip、提交前后与回执后的故障恢复。
 - 没有 Live smoke、网络采集、LLM、股票价格/推荐/排名、Transmission Graph 或 Phase 6。
 
 Issue #10 保持 OPEN；PR 保持 Draft，等待人工复审。
+
+## PR #21 人工 Review 修订验收（本轮最新结果）
+
+修订基线：`83066d525d1f110a8375f43b3dbd85b38a3eb97d`。
+仅处理三个阻塞项，未修改 registry、Ledger、Phase 1–4、Market Engine 或 CI 配置。
+
+1. IndustrySegment 与 CompanyExposure 的现实区间按左闭右开求重叠，完全不重叠拒绝。
+   不再用墙钟判断产业现实适用性。2026-01-01 退役的固定产业版本允许
+   2026-03-28 晚披露的2025业务引用，旧as_of不可见；固定输入PIT门槛不变。
+2. VERIFIED数值新增分子/分母独立 MetricSourceSpan：
+   quote、basis_text、value_text、value_offset。校验不可变raw、数值等值和完整数字边界，
+   包括quote外的百分号/指数，拒绝凭reviewer补造30/100。
+   正式披露及一手FACT/VALIDATED Gate通过后才能VERIFIED；新闻/叙事/二手/PARTIAL保留SUPPORTED/HOLD。
+   30/100→20/100 更正保存新原文片段，旧时点数字及Evidence引用不变。
+3. 采用方案A：EXACT_ALIAS_REVIEWED / VERIFIED_RULE 不属于本Phase可用枚举。
+   VERIFIED_DIRECT只开放MANUAL_VERIFIED，仍需具名reviewer和正式披露。
+   later alias/rule revision不改变旧人工暴露的固定产业版本。
+
+原始本地结果（Windows/Python3.11，现有已锁环境）：
+
+```text
+python -m pytest -q tests/test_phase5_registry_exposure.py tests/test_phase5_review.py
+115 passed in 66.80s (0:01:06)
+
+python -m pytest -q
+425 passed in 178.51s (0:02:58)
+
+python -m pytest -q -m pit
+126 passed, 299 deselected in 50.55s
+```
+
+原398项回归全部保留；新增27项阻塞回归，PIT119→126。
+原异常比例/负利润样例补充真实的虚构原文定位，没有放松异常数值规则。
+四组远端CI以本次提交的PR检查和PR正文job链接为准，不用初始提交的CI冒充本次结果。
+
+兼容性：旧fixture中缺失VERIFIED数值原文定位或使用未实现映射方法的记录会FAIL_CLOSED，
+不自动生成/回写provenance。旧库可用原基线审计；新契约在新隔离fixture库验收，
+未实现旧库自动迁移。无新依赖、无Live、无LLM、无价格/排名/交易。
+全部真实覆盖HOLD及sgmllib3k许可证HOLD保持。Issue #10 OPEN、PR Draft，等待人工复审，不启动Phase 6。

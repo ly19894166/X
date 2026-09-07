@@ -92,6 +92,19 @@ INFERRED 保留推断身份。NARRATIVE_ASSOCIATION 不保存经济产业引用�
 关键词只允许 `CANDIDATE_FOR_REVIEW`，未知业务保留 UNKNOWN。
 无业务披露的公司在 CoverageReport 逐项显示缺失，不需要制造空披露。
 
+PR #21 Review 修订：本 Phase 只实现 `MANUAL_VERIFIED` 的直接核验映射。
+`EXACT_ALIAS_REVIEWED / VERIFIED_RULE` 不在可接受枚举中，一律 FAIL_CLOSED；
+没有实现固定 alias/rule 依据引用前不能通过声明字符串获得 VERIFIED_DIRECT。
+后来的本体、alias 或 rule 修订不改写人工暴露保存的固定 industry_ref。
+
+产业知识时间与现实时间分开：industry_ref 必须指向已发布、PIT 可知的固定版本，
+其 available_at 由 Ledger 输入/提交门槛约束。现实适用性检查产业有效区间与
+CompanyExposure.effective_from/to 是否重叠，使用左闭右开区间；缺失端点保持开放。
+完全不相交（包括仅端点接触）FAIL_CLOSED；不会用当前墙钟判定历史业务是否合法。
+报告期与业务有效区间分别保存，不能拿披露日期替换业务区间。
+2025 业务可在 2026-03-28 晚披露时引用 2026-01-01 已退役的原产业版本；
+旧知识时点仍不可见。
+
 ### Metric 与异常比例
 
 指标类型分别保存 REVENUE、REVENUE_SHARE、GROSS_PROFIT、GROSS_PROFIT_SHARE、
@@ -103,6 +116,22 @@ SALES_VOLUME、ORDER_VALUE、CUSTOMER_SHARE、ASSET_VALUE、UNKNOWN。
 绝对金额/数量为 REPORTED_AMOUNT，不能带比例分母。绝对负利润可保留，
 不能因此生成有意义的负利润“占比”。同一 Metric ID 不允许修改指标类型、
 单位、币种、范围、期间或所归属暴露。
+
+每个实际填入的 VERIFIED 数值必须携带独立的 `numerator_source_span` /
+`denominator_source_span`（绝对金额仅分子；缺失数值仍为 null）。
+嵌套 MetricSourceSpan 保存原文 `quote`、原文口径 `basis_text`、
+`value_text` 和数字在片段中的 Unicode 字符 `value_offset`。
+Pydantic 检查口径及数字定位、完整数字边界、Decimal 等值；
+engine 再检查片段确实在 evidence_ref 的不可变 raw 中。
+不能把130中的30、负数中的正数或百分数直接截成所需数值。
+本版仅支持原样十进制数字，无自动单位缩放、千分位或百分号转换。
+数值定位提供可审计原文，具名 reviewer 仍负责公司/期间/计量口径的语义核验，
+两者不能相互替代。
+
+VERIFIED 数值还需要正式、人工核验且主体已确认的披露，以及一手 FACT + VALIDATED
+Evidence；新闻、叙事、传闻、PARTIAL 或二手来源不得仅靠 reviewer 得到 VERIFIED。
+这些材料可保留 SUPPORTED/HOLD，输出值为 null。各数值版本固定引用当时的 Evidence，
+20/100 更正后的片段不能回填旧时点的30/100。
 
 | 输入 | 输出 |
 | --- | --- |
@@ -163,7 +192,7 @@ Ledger 仅增加模型注册，CLI 仅增加 Schema 注册和 fixture 命令。
 从 `subsystems/event_engine/` 运行：
 
 ```text
-python -m pytest -q tests/test_phase5_registry_exposure.py
+python -m pytest -q tests/test_phase5_registry_exposure.py tests/test_phase5_review.py
 python -m pytest -q
 python -m pytest -q -m pit
 x-event schema --model CompanyExposure
@@ -173,6 +202,11 @@ x-event exposure-fixture --db phase5-demo.sqlite --fixture configs/phase5_exposu
 测试均离线，继承禁真实 socket fixture。支持 Windows/Linux × Python3.11/3.12；
 实际结果另见 PHASE5_VALIDATION.md。没有新依赖；冻结锁和许可证文件不变，
 保留 sgmllib3k 的 HOLD_LICENSE_TEXT_FOR_REDISTRIBUTION。
+
+Review 前的 fixture 数据如果缺少 VERIFIED 数值原文定位，或使用尚未实现的映射方法，
+在新契约下 FAIL_CLOSED；不自动补写原文定位、不修改既有 payload。
+旧数据库可用原基线作审计；本轮离线验收在新隔离库执行。尚未提供旧库自动迁移，
+因此不得把已有旧版 fixture 库宣称为已完成新契约验收。
 
 尚未验证：真实 A 股 PIT 身份全覆盖、真实公司业务覆盖、复杂法律连续性自动判断、
 真实披露语义审计、Live 来源授权/采集。本阶段无网络、股票映射推理、价格、排名或交易。
