@@ -6,7 +6,7 @@ from ..contracts.models import require_input_refs, identity_matches
 from ..ontology.contracts import Chinese, ImpactDirection
 from ..exposures.contracts import ExposureType
 
-POLICY = "X_TRANSMISSION_V0.1"
+POLICY = "X_TRANSMISSION_V0.1_A1"
 World = Literal["ECONOMIC", "NARRATIVE"]
 MappingState = Literal["VERIFIED_DIRECT", "VERIFIED_INDIRECT", "PLAUSIBLE", "NARRATIVE_ONLY", "MIXED", "CONTRADICTED", "INVALID"]
 NetState = Literal["POSITIVE", "NEGATIVE", "MIXED", "NEUTRAL", "UNKNOWN", "HOLD"]
@@ -87,9 +87,14 @@ class TransmissionPath(GraphEnvelope):
     origin_group_ids: Items[Text] = ()
     candidate_ref: VersionRef | None = None
     alternative_mechanism_refs: Items[VersionRef] = ()
+    state_ref: VersionRef | None = None
+    resolution_ref: VersionRef | None = None
+    relation_ref: VersionRef | None = None
+    snapshot_ref: VersionRef | None = None
 
     @model_validator(mode="after")
     def path_gate(self):
+        require_input_refs(self, tuple(r for r in (self.state_ref,self.resolution_ref,self.relation_ref,self.snapshot_ref) if r))
         identity_matches(self, "path_id")
         require_input_refs(self, (*self.node_refs, *self.edge_refs, self.exposure_ref,
             *self.origin_cluster_refs, *self.alternative_mechanism_refs, *([self.candidate_ref] if self.candidate_ref else [])))
@@ -103,7 +108,7 @@ class TransmissionPath(GraphEnvelope):
         if self.exposure_ref not in self.node_refs:
             raise ValueError("GRAPH_EXPOSURE：暴露必须是路径中的固定节点")
         originals=(*self.node_refs,*self.origin_cluster_refs,*self.alternative_mechanism_refs,
-            *([self.candidate_ref] if self.candidate_ref else []))
+            *(r for r in (self.candidate_ref,self.state_ref,self.resolution_ref,self.relation_ref,self.snapshot_ref) if r))
         keys={(r.object_id,r.version) for r in originals}
         if any((r.object_id,r.version) in keys and r.available_at>self.as_of for r in self.input_version_refs):
             raise ValueError("GRAPH_PIT：路径原始节点不得晚于输入截止点；新生成边另按提交时间发布")
@@ -141,15 +146,53 @@ class MappingAssessment(GraphEnvelope):
         return self
 
 
+class ExposureExclusion(Contract):
+    exposure_ref: VersionRef
+    reason_code: Literal["OMITTED_BY_EXPLICIT_REQUEST_REVIEW_REQUIRED"]
+
+
+class ExposureSelectionManifest(GraphEnvelope):
+    snapshot_ref: VersionRef
+    candidate_refs: Items[VersionRef]
+    available_matching_exposure_refs: Items[VersionRef]
+    available_matching_exposure_count: Count
+    selected_exposure_refs: Items[VersionRef]
+    excluded_exposure_refs: Items[VersionRef]
+    exclusions: Items[ExposureExclusion]
+    selection_policy: Literal["ALL_KNOWN_MATCHES_OR_EXPLICIT_OMISSION_HOLD"] = "ALL_KNOWN_MATCHES_OR_EXPLICIT_OMISSION_HOLD"
+    selection_status: Literal["COMPLETE_KNOWN_SUBSET", "HOLD_INCOMPLETE_SELECTION"]
+    coverage_status: Literal["HOLD_REAL_COMPANY_EXPOSURE_COVERAGE"] = "HOLD_REAL_COMPANY_EXPOSURE_COVERAGE"
+
+    @model_validator(mode="after")
+    def complete_partition(self):
+        def keys(rs): return {(r.object_id,r.version) for r in rs}
+        available,selected,excluded=map(keys,(self.available_matching_exposure_refs,self.selected_exposure_refs,self.excluded_exposure_refs))
+        if (self.available_matching_exposure_count!=len(available) or len(self.available_matching_exposure_refs)!=len(available)
+            or len(self.selected_exposure_refs)!=len(selected) or len(self.excluded_exposure_refs)!=len(excluded)
+            or selected & excluded or selected | excluded != available
+            or keys(x.exposure_ref for x in self.exclusions)!=excluded or len(self.exclusions)!=len(excluded)
+            or (self.selection_status=="HOLD_INCOMPLETE_SELECTION")!=bool(excluded)):
+            raise ValueError("EXPOSURE_SELECTION：已知匹配必须完整分割；遗漏必须说明并HOLD")
+        require_input_refs(self,(self.snapshot_ref,*self.candidate_refs,*self.available_matching_exposure_refs))
+        if any(r.available_at>self.as_of for r in self.input_version_refs):
+            raise ValueError("EXPOSURE_SELECTION_PIT：不得使用未来匹配暴露")
+        return self
+
+
 class MappingHistory(GraphEnvelope):
     request: BuildRequest
     path_refs: Items[VersionRef]
     assessment_refs: Items[VersionRef]
     previous_history_ref: VersionRef | None = None
     hold_reasons: Items[Text]
+    selection_manifest_ref: VersionRef | None = None
+    research_status: Literal["CURRENT_KNOWN_SUBSET", "HOLD", "LEGACY_UNASSESSED"] = "LEGACY_UNASSESSED"
 
     @model_validator(mode="after")
     def references(self):
+        require_input_refs(self,tuple(r for r in (self.selection_manifest_ref,) if r))
+        if self.policy_version==POLICY and (self.selection_manifest_ref is None or self.research_status=="LEGACY_UNASSESSED"):
+            raise ValueError("EXPOSURE_SELECTION_REQUIRED：A1正式历史必须有选择清单及研究状态")
         require_input_refs(self, (*self.path_refs, *self.assessment_refs, self.request.event_ref,
             self.request.snapshot_ref, *self.request.resolution_refs, *self.request.exposure_refs,
             *([self.previous_history_ref] if self.previous_history_ref else [])))
@@ -160,4 +203,4 @@ class MappingHistory(GraphEnvelope):
         return self
 
 
-SCHEMAS = {c.__name__: c for c in (EdgeVersion, TransmissionPath, MappingAssessment, MappingHistory)}
+SCHEMAS = {c.__name__: c for c in (EdgeVersion, TransmissionPath, MappingAssessment, MappingHistory, ExposureSelectionManifest)}

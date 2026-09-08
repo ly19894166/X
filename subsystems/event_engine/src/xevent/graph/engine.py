@@ -12,6 +12,7 @@ from ..registry.contracts import Company, SecurityVersion, CompanySecurityRelati
 from ..registry.engine import Registry, key, refs, latest, identity_at, effective
 from ..states.contracts import EventStateSnapshot
 from .contracts import BuildRequest, POLICY
+from .freshness import ResearchKnowledge, event_state, path_reasons
 
 
 class TransmissionGraph:
@@ -27,6 +28,7 @@ class TransmissionGraph:
         def build(conn, full, batch):
             cutoff = request.as_of
             view = {k:r for k,r in full.items() if r.available_at <= cutoff}
+            knowledge=ResearchKnowledge(view)
             def get(r, cls):
                 return self.registry.input(view, r, cls)
             event = get(request.event_ref, EventVersion)
@@ -75,9 +77,12 @@ class TransmissionGraph:
                 if latest(view, CompanyExposure)[ex.object_id] != ex:
                     raise ValueError("GRAPH_EXPOSURE_STALE：不得绕过已知重述")
             states = [s for s in view.values() if isinstance(s,EventStateSnapshot) and s.event_ref.object_id == event.object_id]
-            state = max(states, key=lambda r:(r.available_at,r.object_id), default=None)
-            fact = state.fact_state if state else event.fact_state
+            observed_state = max(states, key=lambda r:(r.available_at,r.object_id), default=None)
+            state_pending=observed_state is not None and observed_state.event_ref!=request.event_ref
+            state=None if state_pending else observed_state
+            fact = "UNVERIFIED" if state_pending else state.fact_state if state else event.fact_state
             holds = ["HOLD_HISTORICAL_UNIVERSE_COVERAGE", "HOLD_REAL_COMPANY_EXPOSURE_COVERAGE"]
+            if state_pending: holds.append("EVENT_STATE_RECOMPUTE_REQUIRED")
             if fact == "INVALIDATED":
                 holds.append("CORE_EVENT_INVALIDATED")
             if state and state.lifecycle_status == "ARCHIVED":
@@ -123,13 +128,33 @@ class TransmissionGraph:
                 return sorted({min(g) for g in touched} | {i for i in ids if not any(i in g for g in touched)}), used
 
             outputs, path_payloads, all_inputs = [], [], [event,snapshot,*exposures]
-            if state:
-                all_inputs.append(state)
+            if observed_state:
+                all_inputs.append(observed_state)
+            # 对固定候选作用域完整枚举当前已知暴露，遗漏不可静默。
+            selection_candidates=[get(cr,IndustryImpactCandidate) for rr in request.resolution_refs
+                for cr in get(rr,IndustryResolution).candidate_refs]
+            snapshot_companies={d.company_ref.object_id for d in snapshot.decisions if d.decision=="INCLUDED" and d.company_ref}
+            matching=[ex for ex in latest(view,CompanyExposure).values() if ex.company_ref.object_id in snapshot_companies
+                and ex.exposure_type!="NARRATIVE_ASSOCIATION" and any(c.industry_ref is not None and
+                    c.industry_ref==ex.industry_ref and c.path_role==ex.business_role for c in selection_candidates)]
+            chosen={key(r) for r in request.exposure_refs}
+            selected=[ex for ex in matching if key(ex) in chosen]
+            excluded=[ex for ex in matching if key(ex) not in chosen]
+            selection_id=history_id+":SELECTION"
+            selection_ref=dict(object_id=selection_id,version=version)
+            self.ledger._put(conn,batch,"ExposureSelectionManifest",selection_id,version,dict(
+                snapshot_ref=ref(snapshot),candidate_refs=refs(selection_candidates),available_matching_exposure_refs=refs(matching),
+                available_matching_exposure_count=len(matching),selected_exposure_refs=refs(selected),excluded_exposure_refs=refs(excluded),
+                exclusions=[dict(exposure_ref=r,reason_code="OMITTED_BY_EXPLICIT_REQUEST_REVIEW_REQUIRED") for r in refs(excluded)],
+                selection_status="HOLD_INCOMPLETE_SELECTION" if excluded else "COMPLETE_KNOWN_SUBSET",
+                as_of=cutoff.isoformat(),provenance_zh="固定快照公司与候选产业版本/角色；枚举全部已知最新暴露，不代表真实全市场覆盖",
+                policy_version=POLICY),refs([snapshot,*selection_candidates,*matching]))
+            if excluded: holds.append("EXPOSURE_SELECTION_REVIEW_REQUIRED")
             def emit(nodes, edge_specs, ex, c, s, relation, candidate=None):
                 world = "ECONOMIC" if candidate else "NARRATIVE"
                 direction = candidate.impact_direction if candidate else "UNKNOWN"
                 depth = len([n for n in nodes if isinstance(n,ImpactVariable)])+1 if candidate else 0
-                base_objects = closure([*nodes,relation,*([candidate] if candidate else []),*([state] if state else [])])
+                base_objects = closure([*nodes,relation,snapshot,*([candidate,resolution] if candidate else []),*([state] if state else [])])
                 evidence = [x for x in base_objects if isinstance(x,EvidenceVersion)]
                 # Origin 仅对应事件/影响证据；年报与证券身份材料不增加事件支持。
                 event_evidence = [e for e in evidence if any(key(e)==key(r) for r in event.evidence_refs)]
@@ -149,6 +174,7 @@ class TransmissionGraph:
                             evidence_refs=refs(edge_evidence),policy_version=POLICY),refs(base_objects))
                     edge_refs.append(dict(object_id=edge_id,version=version))
                 reasons = []
+                if state_pending: reasons.append("EVENT_STATE_RECOMPUTE_REQUIRED")
                 if depth > 3:
                     reasons.append("ECONOMIC_DEPTH_REVIEW_REQUIRED")
                 if candidate and not effective(ex,cutoff):
@@ -168,6 +194,8 @@ class TransmissionGraph:
                     research_status=research,mechanism_zh=candidate.mechanism_zh if candidate else ex.mechanism_zh,
                     uncertainty_zh="经济结果仅为条件候选，历史暴露不证明当前持续；叙事不证明经济收益",
                     candidate_ref=ref(candidate) if candidate else None,origin_cluster_refs=refs(cluster_inputs),origin_group_ids=group_ids,
+                    state_ref=ref(state) if state else None,resolution_ref=ref(resolution) if candidate else None,
+                    relation_ref=ref(relation),snapshot_ref=ref(snapshot),
                     as_of=cutoff.isoformat(),provenance_zh="复用Phase4候选与Phase5固定暴露、披露及证券身份",
                     evidence_refs=refs(evidence),reason_codes=reasons,policy_version=POLICY)
                 self.ledger._put(conn,batch,"TransmissionPath",pid,version,payload,[*refs(base_objects),*edge_refs])
@@ -180,6 +208,11 @@ class TransmissionGraph:
                 all_inputs.append(resolution)
                 if impact.event_ref != request.event_ref:
                     raise ValueError("GRAPH_EVENT：产业候选不属于指定固定事件")
+                research_stale=knowledge.reasons(resolution)
+                if research_stale:
+                    holds.extend(sorted(research_stale))
+                    all_inputs.extend(knowledge.update_refs(resolution))
+                    continue
                 # 仅展开既有显式前提。每条分支有限，超深不删；禁止推导新影响或新产业。
                 def chains(value, visiting=()):
                     if len(visiting) >= 128:
@@ -252,7 +285,7 @@ class TransmissionGraph:
                 positive=[p for p in economic if p["impact_direction"] in ("POSITIVE","MIXED")]
                 negative=[p for p in economic if p["impact_direction"] in ("NEGATIVE","MIXED")]
                 net=combine_impact_directions([p["impact_direction"] for p in economic]) if economic else "UNKNOWN"
-                if any(p["research_status"]=="HOLD" for p in economic): net="HOLD"
+                if any(p["research_status"]=="HOLD" for p in economic) or excluded: net="HOLD"
                 aid=history_id+":ASSESS:"+company_key[0]
                 counter=sorted(negative,key=lambda p:(p["economic_depth"],p["path_id"]))
                 self.ledger._put(conn,batch,"MappingAssessment",aid,version,dict(company_ref=ps[0]["company_ref"],
@@ -264,8 +297,10 @@ class TransmissionGraph:
                 assessment_refs.append(dict(object_id=aid,version=version))
             self.ledger._put(conn,batch,"MappingHistory",history_id,version,dict(request=request.model_dump(mode="json"),
                 path_refs=outputs,assessment_refs=assessment_refs,previous_history_ref=ref(old) if old else None,
+                selection_manifest_ref=selection_ref,research_status="HOLD" if excluded or state_pending or not outputs or
+                    any("RECOMPUTE_REQUIRED" in r for r in holds) or any(p["research_status"]=="HOLD" for p in path_payloads) else "CURRENT_KNOWN_SUBSET",
                 hold_reasons=sorted(set(holds)),as_of=cutoff.isoformat(),provenance_zh="固定输入完整记录；修订追加，旧回放不变",policy_version=POLICY),
-                [*refs(all_inputs),*outputs,*assessment_refs,*([ref(old)] if old else [])])
+                [*refs(all_inputs),*outputs,*assessment_refs,selection_ref,*([ref(old)] if old else [])])
             self.ledger.fault("after_transmission_graph")
         self.ledger._write(f"P6:{history_id}:{version}",digest(request.model_dump(mode="json")),build)
         return self.ledger.get(history_id,version)
@@ -276,11 +311,14 @@ class TransmissionGraph:
         view={key(r):r for r in self.ledger.history(as_of=cutoff)}
         from .contracts import MappingHistory
         histories=latest(view,MappingHistory)
+        knowledge=ResearchKnowledge(view)
+        path_history={key(r):h for h in histories.values() for r in h.path_refs}
         states=[r for r in view.values() if isinstance(r,EventStateSnapshot)]
         result=[]
         for h in sorted(histories.values(),key=key):
             state=max((s for s in states if s.event_ref.object_id==h.request.event_ref.object_id),key=lambda s:(s.available_at,s.object_id),default=None)
-            if active_only and state and (state.lifecycle_status=="ARCHIVED" or state.fact_state=="INVALIDATED"):
+            current_event=latest(view,EventVersion)[h.request.event_ref.object_id]
+            if active_only and state and key(state.event_ref)==key(current_event) and (state.lifecycle_status=="ARCHIVED" or state.fact_state=="INVALIDATED"):
                 continue
             for r in h.path_refs:
                 p=view[key(r)]
@@ -292,23 +330,38 @@ class TransmissionGraph:
             groups.setdefault(group,[]).append(p)
         def stale(ps):
             reasons=set()
-            current_ex=latest(view,CompanyExposure)
-            current_events=latest(view,EventVersion)
-            current_securities=identity_at(view,SecurityVersion,cutoff)
             for p in ps:
-                if key(current_ex[p.exposure_ref.object_id]) != key(p.exposure_ref): reasons.add("EXPOSURE_RECOMPUTE_REQUIRED")
-                if key(current_events[p.event_ref.object_id]) != key(p.event_ref): reasons.add("EVENT_RECOMPUTE_REQUIRED")
-                if key(current_securities[p.security_ref.object_id]) != key(p.security_ref): reasons.add("SECURITY_RECOMPUTE_REQUIRED")
-                if any(isinstance(c,OriginClusterVersion) and c.basis=="CONFIRMED_SAME_ORIGIN" and c.available_at>p.as_of
-                       and set(c.member_origin_ids)&set(p.origin_group_ids) for c in view.values()): reasons.add("ORIGIN_RECOMPUTE_REQUIRED")
+                reasons.update(path_reasons(view,p,path_history[key(p)],knowledge))
             return sorted(reasons)
         return [dict(origin_group_ids=list(g[0]),paths=ps,recompute_reasons=stale(ps)) for g,ps in sorted(groups.items())]
 
-    def alternatives(self, company_id, *, industry_ref, as_of):
-        """仅检索已保存、同一固定产业的其他公司路径，不生成替代标的理由。"""
+    def alternatives(self, company_id, *, industry_ref, as_of, event_ref=None, history_ref=None,
+                     candidate_ref=None, impact_ref=None, resolution_ref=None):
+        """只读同事件/固定产业/机制的当前路径；旧无作用域调用仅允许唯一可推定上下文。"""
         cutoff=TypeAdapter(UTCDateTime).validate_python(as_of)
         from .contracts import MappingHistory
         view={key(r):r for r in self.ledger.history(as_of=cutoff)}
-        paths=[view[key(r)] for h in latest(view,MappingHistory).values() for r in h.path_refs]
-        return sorted((p for p in paths if p.world=="ECONOMIC" and p.company_ref.object_id != company_id
-            and industry_ref in p.node_refs),key=key)
+        for r,cls in ((industry_ref,IndustrySegment),(event_ref,EventVersion),(history_ref,MappingHistory),
+                      (candidate_ref,IndustryImpactCandidate),(impact_ref,ImpactVariable),(resolution_ref,IndustryResolution)):
+            if r is not None: self.registry.input(view,r,cls)
+        histories=list(latest(view,MappingHistory).values())
+        if history_ref is not None:
+            histories=[h for h in histories if key(h)==key(history_ref)]
+            if not histories: raise ValueError("GRAPH_ALT_HISTORY_STALE：只能选择截止点当前历史版本")
+        pairs=[(h,view[key(r)]) for h in histories for r in h.path_refs if view[key(r)].world=="ECONOMIC"
+            and industry_ref in view[key(r)].node_refs]
+        if event_ref is None:
+            events={key(p.event_ref) for _,p in pairs}
+            if len(events)>1: raise ValueError("GRAPH_ALT_SCOPE_REQUIRED：多个事件必须显式指定event_ref/history_ref")
+            event_key=next(iter(events),None)
+        else: event_key=key(event_ref)
+        pairs=[(h,p) for h,p in pairs if key(p.event_ref)==event_key
+            and (candidate_ref is None or p.candidate_ref==candidate_ref)
+            and (impact_ref is None or impact_ref in p.node_refs)
+            and (resolution_ref is None or p.resolution_ref==resolution_ref)]
+        mechanisms={key(p.candidate_ref) for _,p in pairs if p.candidate_ref}
+        if len(mechanisms)>1 and not any((candidate_ref,impact_ref,resolution_ref)):
+            raise ValueError("GRAPH_ALT_MECHANISM_REQUIRED：多机制必须明确固定候选/影响/解析上下文")
+        knowledge=ResearchKnowledge(view)
+        return sorted((p for h,p in pairs if p.company_ref.object_id!=company_id and
+            not path_reasons(view,p,h,knowledge) and p.research_status!="HOLD" and h.research_status!="HOLD"),key=key)
