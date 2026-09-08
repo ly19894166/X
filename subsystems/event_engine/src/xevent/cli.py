@@ -14,8 +14,9 @@ from .ontology.contracts import SCHEMAS as ONTOLOGY_SCHEMAS
 from .registry.contracts import SCHEMAS as REGISTRY_SCHEMAS
 from .exposures.contracts import SCHEMAS as EXPOSURE_SCHEMAS
 from .graph.contracts import SCHEMAS as GRAPH_SCHEMAS
+from .research.contracts import SCHEMAS as RESEARCH_SCHEMAS, OUTPUT_SCHEMAS
 
-CLI_SCHEMAS = {**SCHEMAS, **STATE_SCHEMAS, **ONTOLOGY_SCHEMAS, **REGISTRY_SCHEMAS, **EXPOSURE_SCHEMAS, **GRAPH_SCHEMAS}
+CLI_SCHEMAS = {**SCHEMAS, **STATE_SCHEMAS, **ONTOLOGY_SCHEMAS, **REGISTRY_SCHEMAS, **EXPOSURE_SCHEMAS, **GRAPH_SCHEMAS, **RESEARCH_SCHEMAS, **OUTPUT_SCHEMAS}
 
 
 class ChineseParser(argparse.ArgumentParser):
