@@ -40,12 +40,23 @@ def numeric(claim, packet, view, ledger):
         reject('NUMERIC_CLAIM_UNVERIFIED：不可变原文缺少数值/口径定位','INVALID_NUMERIC_CLAIM')
 
 
-def validate_output(result, packet, view, ledger, primary=None):
+def validate_output(result, packet, view, ledger, primary=None, red=None):
     def evidence(rs):
         if any(r not in packet.evidence_refs for r in rs): reject('INVALID_REFERENCE：证据不在ResearchPacket')
 
     def counters(rs):
         if any(r not in packet.counter_path_refs for r in rs): reject('INVALID_REFERENCE：反路径不在本包反方集合')
+
+    def statements(items):
+        for statement in items:
+            prose(statement.text_zh)
+            if statement.evidence_ref: evidence([statement.evidence_ref])
+            if statement.kind in ('CONFIRMED_FACT','COUNTEREVIDENCE'):
+                ev=view.get(key(statement.evidence_ref)) if statement.evidence_ref else None
+                if (not isinstance(ev,EvidenceVersion) or ev.claim_kind!='FACT' or ev.quality_status!='VALIDATED'
+                    or not statement.quoted_span or statement.text_zh!=statement.quoted_span
+                    or statement.quoted_span not in ledger.raw(ev.raw_object_ref).decode('utf-8',errors='replace')):
+                    reject('INVALID_REFERENCE：事实仅允许已校验FACT原文精确摘录，机制推测另列')
 
     if isinstance(result,HypothesisSet):
         for h in (result.target,*result.alternatives,result.null_hypothesis):
@@ -77,15 +88,7 @@ def validate_output(result, packet, view, ledger, primary=None):
                         industry_ref=ex.industry_ref,as_of=packet.as_of,history_ref=packet.mapping_history_ref,
                         event_ref=packet.event_ref,candidate_ref=path.candidate_ref)
                     if not any(key(p)==key(r) for p in allowed): reject('INVALID_REFERENCE：ALT不属于固定事件机制作用域')
-            for statement in h.statements:
-                prose(statement.text_zh)
-                if statement.evidence_ref: evidence([statement.evidence_ref])
-                if statement.kind in ('CONFIRMED_FACT','COUNTEREVIDENCE'):
-                    ev=view.get(key(statement.evidence_ref)) if statement.evidence_ref else None
-                    if (not isinstance(ev,EvidenceVersion) or ev.claim_kind!='FACT' or ev.quality_status!='VALIDATED'
-                        or not statement.quoted_span or statement.text_zh!=statement.quoted_span
-                        or statement.quoted_span not in ledger.raw(ev.raw_object_ref).decode('utf-8',errors='replace')):
-                        reject('INVALID_REFERENCE：事实仅允许已校验FACT原文精确摘录，机制推测另列')
+            statements(h.statements)
             for claim in h.numeric_claims: numeric(claim,packet,view,ledger)
         selected=next(h for h in (result.target,*result.alternatives,result.null_hypothesis) if h.hypothesis_id==result.selected_id)
         if selected.type!='NULL' and (not selected.supporting_path_refs or packet.eligibility=='REVIEW_ONLY'):
@@ -98,6 +101,9 @@ def validate_output(result, packet, view, ledger, primary=None):
         if ids[chosen].type!='NULL' and not ids[chosen].supporting_path_refs:
             reject('INVALID_REFERENCE：不能选中缺少经济路径的占位假设')
         evidence(result.evidence_refs); prose(result.reasoning_summary_zh)
+        statements(result.statements)
+        if isinstance(result,Adjudication) and red and red.verdict=='TARGET_INVALIDATED' and chosen==primary.target.hypothesis_id:
+            reject('TARGET_INVALIDATED：固定Packet没有新证据，评论不能复活TARGET')
         if isinstance(result,RedTeamReport):
             counters(result.counter_path_refs)
             if any(r not in result.counter_path_refs for r in packet.counter_path_refs): reject('INVALID_REFERENCE：RedTeam遗漏已知反路径')
@@ -105,5 +111,35 @@ def validate_output(result, packet, view, ledger, primary=None):
             for claim in result.numeric_claims: numeric(claim,packet,view,ledger)
             if result.verdict=='ALT_STRONGER' and ids[chosen].type!='ALT': reject('INVALID_REFERENCE：替代更强必须选择合法ALT')
             if result.verdict in ('NULL_PREFERRED','TARGET_INVALIDATED') and ids[chosen].type!='NULL': reject('INVALID_REFERENCE：反证结论必须保留NULL')
-            if result.verdict=='UNCHANGED' and chosen!=primary.selected_id: reject('INVALID_REFERENCE：UNCHANGED不能暗换选择')
+            if result.verdict in ('UNCHANGED','TARGET_WEAKENED') and chosen!=primary.selected_id: reject('INVALID_REFERENCE：UNCHANGED/TARGET_WEAKENED不能暗换选择')
     return result
+
+
+COMMENTARY_FIELDS=frozenset(('assumptions','failure_conditions','unknowns','reasoning_summary_zh',
+    'challenges_zh','failure_conditions_zh','alternative_search_gap_zh'))
+
+
+def downstream_input(result):
+    """保留结构化假设和已验证声明；自由评论不进入后续模型输入。"""
+    def clean(value):
+        if isinstance(value,dict):
+            return {k:clean(v) for k,v in value.items() if k not in COMMENTARY_FIELDS}
+        if isinstance(value,list): return [clean(v) for v in value]
+        return value
+    return clean(result.model_dump(mode='json'))
+
+
+def validate_decision(run, primary, red, adjudication):
+    """固定ModelResult解析后的选择/类型一致性；Schema负责来源引用一致性。"""
+    if run.analysis_status=='HOLD': return run
+    if primary is None or red is None: reject('DECISION_SOURCE：缺少主研究或反方')
+    hs=primary.primary
+    selected={'PRIMARY':hs.selected_id,'RED_TEAM':red.red_team.recommended_id,
+              'ADJUDICATION':adjudication.adjudication.selected_id if adjudication else None}[run.decision_source]
+    chosen=next((h for h in (hs.target,*hs.alternatives,hs.null_hypothesis) if h.hypothesis_id==selected),None)
+    if chosen is None or run.final_hypothesis_id!=selected or run.final_choice!=chosen.type:
+        reject('DECISION_SOURCE：最终假设与决定来源不一致')
+    if adjudication is None:
+        expected='PRIMARY' if red.red_team.recommended_id==hs.selected_id else 'RED_TEAM'
+        if run.decision_source!=expected: reject('DECISION_SOURCE：反方选择来源不一致')
+    return run

@@ -1,5 +1,6 @@
 """一次主研究、一次独立反方、必要时一次裁定；调用前记预算，崩溃后不盲目重发。"""
 import json
+from types import SimpleNamespace
 from pydantic import ValidationError
 from ..ledger.store import digest, ref
 from ..registry.engine import key, refs, latest
@@ -7,7 +8,7 @@ from .contracts import (ResearchPacket,ModelConfig,PromptVersion,HypothesisSet,R
     ModelResult,CostLedger,AnalysisRun,AnalysisStart)
 from .packet import ResearchStore, vr
 from .provider import GUARD, ProviderResponse, invoke
-from .validation import validate_output, ResearchInvalid
+from .validation import validate_output, ResearchInvalid, downstream_input, validate_decision
 
 OUTPUTS={'PRIMARY':HypothesisSet,'RED_TEAM':RedTeamReport,'ADJUDICATION':Adjudication}
 FIELDS={'PRIMARY':'primary','RED_TEAM':'red_team','ADJUDICATION':'adjudication'}
@@ -60,8 +61,8 @@ class ResearchEngine(ResearchStore):
         def call(kind, primary=None, red=None):
             nonlocal spent_requests,reserved_tokens,repairs
             data={**base}
-            if primary: data['primary']=primary.primary.model_dump(mode='json')
-            if red: data['red_team']=red.red_team.model_dump(mode='json')
+            if primary: data['primary']=downstream_input(primary.primary)
+            if red: data['red_team']=downstream_input(red.red_team)
             system=GUARD+'\n'+getattr(prompt,TEMPLATES[kind])
             schema=OUTPUTS[kind].model_json_schema()
             cache_key=digest([packet.packet_hash,packet.research_mode,model.content_hash,prompt.content_hash,kind,data,system,schema])
@@ -70,7 +71,7 @@ class ResearchEngine(ResearchStore):
             cost_base=dict(analysis_run_id=identity,provider=model.provider_id,model=model.model_identifier,
                 call_type=kind,cache_key=cache_key,as_of=packet.as_of.isoformat(),provenance_zh='逐调用审计，未知价格与用量不补零')
             if cached:
-                validate_output(getattr(cached,FIELDS[kind]),packet,original_view,self.ledger,primary.primary if primary else None)
+                validate_output(getattr(cached,FIELDS[kind]),packet,original_view,self.ledger,primary.primary if primary else None,red.red_team if red else None)
                 cost=self.save('CostLedger',identity+':'+kind+':CACHE',dict(**cost_base,request_count=0,reserved_output=0,
                     cache_hit=True,call_status='SUCCESS'),[*inputs,cached])
                 costs.append(cost)
@@ -98,7 +99,7 @@ class ResearchEngine(ResearchStore):
                     if len(response.content.encode('utf-8'))>model.max_output*32 or (response.output_usage is not None and response.output_usage>model.max_output):
                         raise ResearchInvalid('BUDGET_EXHAUSTED','输出超出预留上限')
                     parsed=OUTPUTS[kind].model_validate_json(response.content)
-                    validate_output(parsed,packet,original_view,self.ledger,primary.primary if primary else None)
+                    validate_output(parsed,packet,original_view,self.ledger,primary.primary if primary else None,red.red_team if red else None)
                 except TimeoutError:
                     status='TIMEOUT'
                 except ResearchInvalid as exc:
@@ -136,13 +137,17 @@ class ResearchEngine(ResearchStore):
                         red_result.red_team.verdict in ('TARGET_INVALIDATED','ALT_STRONGER','NULL_PREFERRED'))
                     if conflict and model.allow_adjudication:
                         adj_result=call('ADJUDICATION',primary_result,red_result)
-        final_result=adj_result or primary_result
+        final_result=None; decision_source='HOLD_GATE'
         selected=None; choice='HOLD'; analysis_status='HOLD'
         if primary_result and red_result:
             hypotheses=primary_result.primary
-            selected=adj_result.adjudication.selected_id if adj_result else (
-                hypotheses.selected_id if red_result.red_team.verdict in ('UNCHANGED','TARGET_WEAKENED') else hypotheses.null_hypothesis.hypothesis_id)
-            if red_result.red_team.verdict=='TARGET_INVALIDATED': selected=hypotheses.null_hypothesis.hypothesis_id
+            selected=adj_result.adjudication.selected_id if adj_result else red_result.red_team.recommended_id
+            if adj_result:
+                decision_source='ADJUDICATION'; final_result=adj_result
+            elif selected!=hypotheses.selected_id:
+                decision_source='RED_TEAM'; final_result=red_result
+            else:
+                decision_source='PRIMARY'; final_result=primary_result
             # 模型运行期间上游也可能变化；发布前重新检查，同样不能让模型豁免。
             gates,_=self.gates(history,original_view if packet.research_mode=='HISTORICAL_REPLAY' else self.view(self.ledger.now()))
             reasons.extend(gates)
@@ -150,16 +155,20 @@ class ResearchEngine(ResearchStore):
                 choice=next(h.type for h in (hypotheses.target,*hypotheses.alternatives,hypotheses.null_hypothesis) if h.hypothesis_id==selected)
                 analysis_status='MOCK_PASS'
             else:
-                selected=hypotheses.null_hypothesis.hypothesis_id; choice='NULL'
+                selected=None; choice='NULL'
+        if analysis_status=='HOLD':
+            decision_source='HOLD_GATE'; final_result=None; selected=None
         finished=self.ledger.now()
         inputs=[packet,model,prompt,start,*costs,*[r for r in (primary_result,red_result,adj_result) if r],
             self.ledger.get(packet.search_coverage_ref.object_id,packet.search_coverage_ref.version)]
-        return self.save('AnalysisRun',identity,dict(packet_ref=ref(packet),primary_result_ref=ref(primary_result) if primary_result else None,
+        payload=dict(packet_ref=ref(packet),primary_result_ref=ref(primary_result) if primary_result else None,
             red_team_ref=ref(red_result) if red_result else None,adjudication_ref=ref(adj_result) if adj_result else None,
-            final_result_ref=ref(final_result) if final_result else None,final_hypothesis_id=selected,final_choice=choice,
+            decision_source=decision_source,final_result_ref=ref(final_result) if final_result else None,final_hypothesis_id=selected,final_choice=choice,
             model_config_refs=[ref(model)],prompt_refs=[ref(prompt)],cost_ledger_refs=refs(costs),search_coverage_ref=ref(packet.search_coverage_ref),
             started_at=started.isoformat(),completed_at=finished.isoformat(),as_of=packet.as_of.isoformat(),research_mode=packet.research_mode,
-            analysis_status=analysis_status,hold_reasons=sorted(set([*HOLDS,*reasons])),provenance_zh='模型研究公开审计结果；Mock通过不代表真实模型或Alpha有效'),inputs)
+            analysis_status=analysis_status,hold_reasons=sorted(set([*HOLDS,*reasons])),provenance_zh='模型研究公开审计结果；Mock通过不代表真实模型或Alpha有效')
+        validate_decision(SimpleNamespace(**payload),primary_result,red_result,adj_result)
+        return self.save('AnalysisRun',identity,payload,inputs)
 
     def report(self, run_ref):
         run=self.ledger.get(run_ref.object_id,run_ref.version)
@@ -168,7 +177,8 @@ class ResearchEngine(ResearchStore):
         primary=self.ledger.get(run.primary_result_ref.object_id,run.primary_result_ref.version).primary if run.primary_result_ref else None
         red=self.ledger.get(run.red_team_ref.object_id,run.red_team_ref.version).red_team if run.red_team_ref else None
         return {'声明':'仅工程Mock结构化研究，不代表真实模型研究有效或投资建议','研究状态':run.analysis_status,
-            '研究模式':run.research_mode,
+            '研究模式':run.research_mode,'决定来源':run.decision_source,
+            '自由文本资格':'INFERENCE_ONLY / RESEARCH_COMMENTARY，无正式FACT资格',
             '最终假设类型':run.final_choice,'最终假设':run.final_hypothesis_id,'输入截止':packet.as_of.isoformat(),
             '结果可用':run.available_at.isoformat(),'假设集合':primary.model_dump(mode='json') if primary else None,
             '反方审查':red.model_dump(mode='json') if red else None,'HOLD':list(run.hold_reasons)}

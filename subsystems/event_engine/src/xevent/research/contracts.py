@@ -7,6 +7,8 @@ from ..ontology.contracts import Chinese
 
 POLICY = 'X_RESEARCH_V0.1'
 CallType = Literal['PRIMARY', 'RED_TEAM', 'ADJUDICATION']
+DecisionSource = Literal['PRIMARY','RED_TEAM','ADJUDICATION','HOLD_GATE']
+Commentary = Annotated[Chinese, Field(description='INFERENCE_ONLY / RESEARCH_COMMENTARY：无FACT资格，不得作为新增事实输入')]
 ResearchMode = Literal['MOCK_FORWARD', 'HISTORICAL_REPLAY']
 
 
@@ -146,11 +148,11 @@ class Hypothesis(Contract):
     supporting_path_refs: Items[VersionRef] = ()
     supporting_evidence_refs: Items[VersionRef] = ()
     counter_path_refs: Items[VersionRef] = ()
-    assumptions: Annotated[Items[Chinese], Field(min_length=1)]
-    failure_conditions: Annotated[Items[Chinese], Field(min_length=1)]
-    unknowns: Items[Chinese]
+    assumptions: Annotated[Items[Commentary], Field(min_length=1)]
+    failure_conditions: Annotated[Items[Commentary], Field(min_length=1)]
+    unknowns: Items[Commentary]
     confidence_band: Band
-    reasoning_summary_zh: Chinese
+    reasoning_summary_zh: Commentary
     statements: Items[ResearchStatement] = ()
     numeric_claims: Items[NumericClaim] = ()
 
@@ -182,16 +184,18 @@ class RedTeamReport(Contract):
     recommended_id: Text
     evidence_refs: Items[VersionRef]
     counter_path_refs: Items[VersionRef]
-    challenges_zh: Annotated[Items[Chinese], Field(min_length=1)]
-    failure_conditions_zh: Annotated[Items[Chinese], Field(min_length=1)]
-    reasoning_summary_zh: Chinese
+    challenges_zh: Annotated[Items[Commentary], Field(min_length=1)]
+    failure_conditions_zh: Annotated[Items[Commentary], Field(min_length=1)]
+    reasoning_summary_zh: Commentary
     numeric_claims: Items[NumericClaim] = ()
+    statements: Items[ResearchStatement] = ()
 
 
 class Adjudication(Contract):
+    statements: Items[ResearchStatement] = ()
     selected_id: Text
     evidence_refs: Items[VersionRef]
-    reasoning_summary_zh: Chinese
+    reasoning_summary_zh: Commentary
 
 
 class ModelResult(ResearchModeEnvelope):
@@ -244,6 +248,7 @@ class AnalysisRun(ResearchModeEnvelope):
     primary_result_ref: VersionRef | None
     red_team_ref: VersionRef | None
     adjudication_ref: VersionRef | None
+    decision_source: DecisionSource
     final_result_ref: VersionRef | None
     final_hypothesis_id: Text | None
     final_choice: Literal['TARGET','ALT','NULL','HOLD']
@@ -263,10 +268,19 @@ class AnalysisRun(ResearchModeEnvelope):
             raise ValueError('ANALYSIS_TIME：实际完成后才能发布')
         if self.final_choice in ('TARGET','ALT') and (self.red_team_ref is None or self.analysis_status!='MOCK_PASS'):
             raise ValueError('RED_TEAM_REQUIRED：未完成反方不得发布主要假设')
+        sources={'PRIMARY':self.primary_result_ref,'RED_TEAM':self.red_team_ref,'ADJUDICATION':self.adjudication_ref}
+        if self.analysis_status=='HOLD':
+            if self.decision_source!='HOLD_GATE' or self.final_result_ref is not None or self.final_hypothesis_id is not None or self.final_choice not in ('HOLD','NULL'):
+                raise ValueError('DECISION_SOURCE：HOLD只能由Gate决定，无正式模型选择或引用')
+        elif (self.decision_source=='HOLD_GATE' or self.final_result_ref is None
+              or self.final_result_ref!=sources.get(self.decision_source)
+              or self.final_hypothesis_id is None or self.final_choice=='HOLD'
+              or (self.adjudication_ref is not None and self.decision_source!='ADJUDICATION')):
+            raise ValueError('DECISION_SOURCE：正式选择必须对应唯一决定来源')
         require_input_refs(self,(self.packet_ref,self.search_coverage_ref,*self.model_config_refs,*self.prompt_refs,
             *self.cost_ledger_refs,*(r for r in (self.primary_result_ref,self.red_team_ref,self.adjudication_ref,self.final_result_ref) if r)))
         return self
 
 
 SCHEMAS={c.__name__:c for c in (PromptVersion,ModelConfig,SearchCoverage,ResearchPacket,ModelResult,CostLedger,AnalysisStart,AnalysisRun)}
-OUTPUT_SCHEMAS={c.__name__:c for c in (HypothesisSet,RedTeamReport,Adjudication,NumericClaim)}
+OUTPUT_SCHEMAS={c.__name__:c for c in (HypothesisSet,RedTeamReport,Adjudication,NumericClaim,ResearchStatement)}
