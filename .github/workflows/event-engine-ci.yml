@@ -1,4 +1,4 @@
-name: Event Engine Phase 7
+name: Event Engine Phase 8
 
 on:
   pull_request:
@@ -36,7 +36,7 @@ jobs:
         run: python -m pip install --no-build-isolation --no-deps -e .
       - name: 依赖一致性
         run: python -m pip check
-      - name: Phase 1–7 full tests
+      - name: Phase 1–8 full tests
         run: python -m pytest -q
       - name: PIT tests 单独报告
         run: python -m pytest -q -m pit
@@ -56,3 +56,5 @@ jobs:
         run: python -m xevent.graph.fixture --db phase6-ci.sqlite
       - name: Phase 7 固定研究与独立反方中文Mock fixture
         run: python -m xevent.research.fixture --db phase7-ci.sqlite
+      - name: Phase 8 市场定价状态中文离线fixture
+        run: python -m xevent.pricing.fixture --db phase8-ci.sqlite
