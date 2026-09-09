@@ -5,7 +5,7 @@ from ..contracts import Source, EvidenceVersion, EventVersion
 from ..contracts.common import UTCDateTime, VersionRef, InputVersionRef
 from ..ledger.store import ref, digest
 from ..ledger.contracts import NoveltyDecision
-from ..registry.engine import Registry, key, refs, latest
+from ..registry.engine import Registry, key, refs
 from ..registry.contracts import SecurityVersion
 from ..ontology.contracts import IndustrySegment
 from ..graph.contracts import TransmissionPath, MappingHistory, MappingAssessment
@@ -15,6 +15,7 @@ from ..research.packet import ResearchStore, vr
 from ..research.validation import validate_decision
 from ..research.engine import HOLDS
 from .contracts import *
+from .freshness import newer_inputs, mode_scope
 from .calculations import price_return, comparable, quality, observation_key, volume_multiple, diffusion, classify_dimensions
 
 INPUTS=(MarketInstrument,MarketSession,AdjustmentBasis,ProviderQualification,MarketObservation,
@@ -208,7 +209,7 @@ class PricingEngine:
             observations={}
             market_latest={}
             for o in v.values():
-                if isinstance(o,MarketObservation):
+                if isinstance(o,MarketObservation) and mode_scope(o.pricing_mode)==mode_scope(request.pricing_mode):
                     k=observation_key(o)
                     if k not in market_latest or (o.available_at,o.version,o.object_id)>(market_latest[k].available_at,market_latest[k].version,market_latest[k].object_id):
                         market_latest[k]=o
@@ -216,7 +217,7 @@ class PricingEngine:
                 o=take(r,MarketObservation); observations[key(o)]=o
                 for child in (o.session_ref,o.adjustment_ref,o.provider_ref,o.source_ref,o.instrument_ref):
                     take(child,(MarketSession,AdjustmentBasis,ProviderQualification,Source,SecurityVersion,MarketInstrument))
-                if market_latest[observation_key(o)]!=o: miss('MARKET_OBSERVATION_RECOMPUTE_REQUIRED','BLOCKING')
+                if market_latest.get(observation_key(o),o)!=o: miss('MARKET_OBSERVATION_RECOMPUTE_REQUIRED','BLOCKING')
                 for code in quality(o,v,at,rules,current): miss(code,'BLOCKING' if current else 'DEGRADED')
                 if o.pricing_mode=='HISTORICAL_REPLAY' and request.pricing_mode!='HISTORICAL_REPLAY': miss('MARKET_MODE_MISMATCH','BLOCKING')
                 return o
@@ -250,7 +251,7 @@ class PricingEngine:
                     ex=take(path.exposure_ref,CompanyExposure)
                     if path.world=='ECONOMIC' and comp.industry_ref!=ex.industry_ref: raise ValueError('INDUSTRY_BENCHMARK_SCOPE')
                     if comp.coverage_status!='COMPLETE_DECLARED_SCOPE': miss('INDUSTRY_COMPONENTS_INCOMPLETE')
-                if latest(v,BenchmarkComposition)[comp.object_id]!=comp: miss('BENCHMARK_COMPONENTS_RECOMPUTE_REQUIRED','BLOCKING')
+                if newer_inputs(v,comp,request.pricing_mode): miss('BENCHMARK_COMPONENTS_RECOMPUTE_REQUIRED','BLOCKING')
                 by_role[bm.benchmark_role]=bm
             for role in ('MARKET','INDUSTRY'):
                 if role not in by_role: miss(role+'_BENCHMARK_MISSING','BLOCKING')
@@ -363,7 +364,9 @@ class PricingEngine:
                 bo=[obs(r) for r in buyer.supporting_observation_refs]
                 if any(p.event_ref!=vr(event) or p.security_ref!=request.security_ref or p.world!='ECONOMIC' or vr(p) not in packet.path_refs for p in bp):
                     raise ValueError('NEXT_BUYER_PATH_SCOPE')
-                if buyer.buyer_type=='SHORT_COVERING':
+                if any(vr(p)!=request.path_ref for p in bp):
+                    bs='WEAK'; br.append('NEXT_BUYER_MECHANISM_MISMATCH')
+                elif buyer.buyer_type=='SHORT_COVERING':
                     bs='REJECTED'; br.append('A_SHARE_SHORT_COVERING_NOT_ESTABLISHED')
                 elif buyer.buyer_type=='UNKNOWN':
                     bs='UNKNOWN'; br.append('BUYER_UNKNOWN')
@@ -383,10 +386,10 @@ class PricingEngine:
             if not buyer_good: miss('NEXT_BUYER_NOT_SPECIFIC')
             for obj in list(deps.values()):
                 if isinstance(obj,PricingEnvelope):
-                    newest=latest(v,type(obj)).get(obj.object_id)
-                    if newest is not None and key(newest)!=key(obj):
+                    updates=newer_inputs(v,obj,request.pricing_mode)
+                    if updates:
                         miss(type(obj).__name__.upper()+'_RECOMPUTE_REQUIRED','BLOCKING')
-                        deps[key(newest)]=newest
+                        for newest in updates: deps[key(newest)]=newest
                     if obj.pricing_mode=='HISTORICAL_REPLAY' and request.pricing_mode!='HISTORICAL_REPLAY':
                         miss('PRICING_INPUT_MODE_MISMATCH','BLOCKING')
             triggered=relative('INDUSTRY') is not None and abs(relative('INDUSTRY'))<rules.low_reaction
@@ -448,15 +451,22 @@ class PricingEngine:
         reasons=set()
         history=v[key(v[key(v[key(a.request.analysis_ref)].packet_ref)].mapping_history_ref)]
         reasons.update(self.research.gates(history,v)[0])
-        prior_inputs={key(r) for r in a.input_version_refs}
         instruments={v[key(r)].instrument_ref.object_id for r in a.market_observation_refs}
         for obj in v.values():
-            if isinstance(obj,MarketObservation) and obj.instrument_ref.object_id in instruments and obj.available_at>a.available_at:
+            if (isinstance(obj,MarketObservation) and mode_scope(obj.pricing_mode)==mode_scope(a.pricing_mode)
+                and obj.instrument_ref.object_id in instruments and obj.available_at>a.available_at):
                 reasons.add('MARKET_OBSERVATION_RECOMPUTE_REQUIRED')
-            if isinstance(obj,(BenchmarkComposition,AdjustmentBasis,MarketSession,ProviderQualification,PricingContext,PricingPolicy)):
-                if any(oid==obj.object_id and ver<obj.version for oid,ver in prior_inputs): reasons.add(type(obj).__name__.upper()+'_RECOMPUTE_REQUIRED')
             if isinstance(obj,AnalysisRun) and self._analysis_scope(v,obj,a.security_ref.object_id)==self._analysis_scope(v,v[key(a.request.analysis_ref)],a.security_ref.object_id) and obj.available_at>a.available_at:
                 reasons.add('ANALYSIS_RECOMPUTE_REQUIRED')
+        for r in a.input_version_refs:
+            obj=v[key(r)]
+            if newer_inputs(v,obj,a.pricing_mode):
+                reasons.add(type(obj).__name__.upper()+'_RECOMPUTE_REQUIRED')
+        event=v[key(a.event_ref)]
+        evidence_ids={r.object_id for r in event.evidence_refs}
+        if any(isinstance(o,NoveltyDecision) and o.evidence_ref.object_id in evidence_ids
+               and o.available_at>a.available_at for o in v.values()):
+            reasons.add('NOVELTY_RECOMPUTE_REQUIRED')
         policy=v[key(a.request.policy_ref)]
         if a.request.price_refs:
             o=v[key(a.request.price_refs[-1])]

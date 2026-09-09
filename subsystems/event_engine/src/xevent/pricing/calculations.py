@@ -20,7 +20,8 @@ def price_return(points):
 
 
 def observation_key(o):
-    return (o.instrument_ref.object_id,o.observation_type,o.window.start,o.window.end,o.source_ref.object_id)
+    from .freshness import semantic_scope
+    return semantic_scope(o)
 
 
 def quality(o,view,at,rules,current=False):

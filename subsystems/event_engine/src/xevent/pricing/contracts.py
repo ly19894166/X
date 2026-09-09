@@ -74,6 +74,7 @@ class MarketSession(PricingEnvelope):
     timezone_basis: Literal["PROVIDER_DECLARED_SESSION_OFFSET"]="PROVIDER_DECLARED_SESSION_OFFSET"
     intervals: Items[Window]
     calendar_version: Text
+    session_scope: Text | None = None
     @model_validator(mode='after')
     def schedule(self):
         if any(w.start==w.end for w in self.intervals) or any(a.end>b.start for a,b in zip(self.intervals,self.intervals[1:])):
