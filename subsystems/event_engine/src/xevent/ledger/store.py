@@ -23,8 +23,9 @@ from ..exposures.contracts import SCHEMAS as EXPOSURE_SCHEMAS
 from ..graph.contracts import SCHEMAS as GRAPH_SCHEMAS
 from ..research.contracts import SCHEMAS as RESEARCH_SCHEMAS
 from ..pricing.contracts import SCHEMAS as PRICING_SCHEMAS
+from ..ranking.contracts import SCHEMAS as RANKING_SCHEMAS
 
-MODELS = {**SCHEMAS, **STATE_SCHEMAS, **ONTOLOGY_SCHEMAS, **REGISTRY_SCHEMAS, **EXPOSURE_SCHEMAS, **GRAPH_SCHEMAS, **RESEARCH_SCHEMAS, **PRICING_SCHEMAS, **{name: getattr(c, name) for name in (
+MODELS = {**SCHEMAS, **STATE_SCHEMAS, **ONTOLOGY_SCHEMAS, **REGISTRY_SCHEMAS, **EXPOSURE_SCHEMAS, **GRAPH_SCHEMAS, **RESEARCH_SCHEMAS, **PRICING_SCHEMAS, **RANKING_SCHEMAS, **{name: getattr(c, name) for name in (
     "EventLedgerEntry", "EvidenceChange", "OriginClusterVersion", "NoveltyDecision",
     "CollectorCursor", "OutboxJob", "SourceHealth")}}
 
