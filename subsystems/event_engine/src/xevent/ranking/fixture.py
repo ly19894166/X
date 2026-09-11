@@ -86,14 +86,14 @@ def prepare_package(db,configs):
         stock=0.08 if label=='OVERPRICED' else 0.051 if label=='BETA' else 0.0
         industry=0.05 if label=='BETA' else 0.0
         req=request(local,prefix='P9_MARKET_'+label,stock_return=stock,industry_return=industry,
-            flow=5.0 if label=='OVERPRICED' else 1.0,buyer=label not in ('WATCH','OVERPRICED'))
+            flow=5.0 if label=='OVERPRICED' else 3.0 if label=='BETA' else 1.0,buyer=label not in ('WATCH','OVERPRICED'))
         fields={}
         # Pre-event same-clock baseline, not post-event daily totals.
         for kind,value in (('VOLUME',1000.0),('AMOUNT',100000.0)):
             fields[kind.lower()+'_baseline_refs']=[vr(observation(w,'P9_BASE_'+label+kind+str(day),w['security'],kind,value,
                 market_start+timedelta(seconds=i)-timedelta(days=day),market_end+timedelta(seconds=i)-timedelta(days=day))) for day in (1,2,3)]
-        if label=='OVERPRICED':
-            fields['prior_session_price_refs']=[vr(observation(w,'P9_TREND_'+str(day)+part,w['security'],'PRICE',value,stamp+timedelta(days=day,seconds=i)))
+        if label in ('OVERPRICED','BETA'):
+            fields['prior_session_price_refs']=[vr(observation(w,'P9_TREND_'+label+str(day)+part,w['security'],'PRICE',value,stamp+timedelta(days=day,seconds=i)))
                 for day in (0,1,2) for part,value,stamp in (('A',100.0,market_start),('B',108.0,market_end))]
         requests.append(PricingRequest.model_validate({**req.model_dump(),**fields}))
     # request() emitted identical pre-event endpoints with distinct IDs; use the final fixed pair everywhere.

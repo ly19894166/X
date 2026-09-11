@@ -9,6 +9,8 @@ from ..exposures.contracts import ExposureType
 from ..pricing.contracts import PricingMode, Recognition, PriceIn, Risk, Edge
 
 POLICY = 'X_RANK_V0.1'
+GRADE_ORDER = ('ALPHA1','ALPHA2','BETA','WATCH','OVERPRICED','REJECT')
+BETA_CORE = ('remaining_edge','thesis_strength','price_in_band','crowding_band','reversal_risk')
 Grade = Literal['ALPHA1','ALPHA2','BETA','WATCH','OVERPRICED','REJECT']
 Reason = Literal['INVALID_IDENTITY','INVALID_PATH','NARRATIVE_ONLY_FOR_ECONOMIC_ALPHA',
     'RESEARCH_HOLD','RESEARCH_NULL','RED_TEAM_INVALIDATED','PRICING_HOLD','NO_REMAINING_EDGE',
@@ -35,7 +37,8 @@ class RankEnvelope(DerivedEnvelope):
 
 
 class RankRules(Contract):
-    grade_order: Items[Grade] = ('ALPHA1','ALPHA2','BETA','WATCH','OVERPRICED','REJECT')
+    grade_order: Items[Grade] = GRADE_ORDER
+    beta_unknown_policy: Literal['CORE_KNOWN_COMPANY_BUYER_OPTIONAL'] = 'CORE_KNOWN_COMPANY_BUYER_OPTIONAL'
     dimension_order: Items[Text] = ('remaining_edge','thesis_strength','next_buyer_status',
         'price_in_band','crowding_band','reversal_risk','alternative_cause_status','purity','missingness')
     ordinal_orders: dict[str, Items[Text]] = Field(default_factory=lambda: {
@@ -75,7 +78,7 @@ class RankRules(Contract):
     @model_validator(mode='after')
     def policy_gate(self):
         defaults = type(self).model_fields
-        if set(self.grade_order) != set(defaults['grade_order'].default) or len(self.grade_order)!=6:
+        if tuple(self.grade_order) != GRADE_ORDER:
             raise ValueError('RANK_GRADE_ORDER')
         if set(self.dimension_order)!=set(self.ordinal_orders) or len(set(self.dimension_order))!=len(self.dimension_order):
             raise ValueError('RANK_DIMENSIONS')
@@ -120,6 +123,8 @@ class RankRequest(Contract):
     @model_validator(mode='after')
     def unique(self):
         if len(set(self.history_refs))!=len(self.history_refs): raise ValueError('DUPLICATE_SCOPE')
+        if len({r.object_id for r in self.history_refs})!=len(self.history_refs):
+            raise ValueError('RANK_HISTORY_VERSION_AMBIGUITY')
         return self
 
 
@@ -214,6 +219,9 @@ class CandidateVersion(RankEnvelope, RankDimensions):
         if self.candidate_id!=self.object_id: raise ValueError('CANDIDATE_ID')
         if self.candidate_grade in ('ALPHA1','ALPHA2','BETA') and (not self.countercase or not self.failure_conditions):
             raise ValueError('RANK_COUNTERCASE_REQUIRED')
+        if self.candidate_grade=='BETA' and self.processing_state=='VALID':
+            if any(getattr(self,n) in ('UNKNOWN','HOLD') for n in BETA_CORE):
+                raise ValueError('RANK_BETA_BLOCKING_UNKNOWN')
         if self.candidate_grade in ('ALPHA1','ALPHA2'):
             if (self.world!='ECONOMIC' or self.processing_state!='VALID' or self.research_status!='MOCK_PASS'
                 or self.pricing_status!='ENGINEERING_ONLY' or self.final_choice not in ('TARGET','ALT')

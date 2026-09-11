@@ -14,7 +14,7 @@ from ..pricing.contracts import PricingAssessment, MarketReactionFeatures, NextB
 from ..pricing.freshness import mode_scope
 from ..exposures.contracts import ExposureMetric
 from .contracts import *
-from .policy import classify, ordinal_dimensions, sort_key
+from .policy import classify, ordinal_dimensions, sort_key, grade_change
 
 HOLDS=('HOLD_MODEL_PROVIDER_LIVE','HOLD_MODEL_USAGE_COST_UNVERIFIED','HOLD_MARKET_DATA_PROVIDER_LIVE',
     'HOLD_PRICING_POLICY_CALIBRATION','HOLD_RANK_POLICY_CALIBRATION','HOLD_HISTORICAL_UNIVERSE_COVERAGE',
@@ -135,6 +135,8 @@ class RankingEngine:
             policy=take(request.policy_ref,RankPolicy); rules=policy.rules
             if mode_scope(policy.ranking_mode)!=mode_scope(request.ranking_mode): raise ValueError('RANK_POLICY_MODE')
             histories=[take(r,MappingHistory) for r in request.history_refs]
+            if len({h.object_id for h in histories})!=len(histories):
+                raise ValueError('RANK_HISTORY_VERSION_AMBIGUITY')
             previous=take(request.previous_package_ref,OpportunityPackage) if request.previous_package_ref else None
             if previous and previous.ranking_mode!=request.ranking_mode: raise ValueError('RANK_PREVIOUS_SCOPE')
             if old and (not previous or vr(previous)!=vr(old)): raise ValueError('RANK_PREVIOUS_VERSION_REQUIRED')
@@ -147,7 +149,7 @@ class RankingEngine:
                 oid=identity+suffix
                 staged.append((cls,oid,{**common,**data},tuple(inputs)))
                 return VersionRef(object_id=oid,version=version)
-            rows=[]; seen=set(); samples={d.security_ref.object_id:[] for d in snapshot.decisions}
+            rows=[]; samples={d.security_ref.object_id:[] for d in snapshot.decisions}
             decisions={d.security_ref.object_id:d for d in snapshot.decisions}
             for h in histories:
                 hreason=self._history_reasons(h,v)
@@ -155,6 +157,12 @@ class RankingEngine:
                     p=take(r,TransmissionPath)
                     d=decisions.get(p.security_ref.object_id)
                     rows.append((p.security_ref,p,h,d,hreason))
+            row_scopes=[(p.event_ref.object_id,p.security_ref.object_id,p.exposure_ref.object_id,p.world,
+                p.candidate_ref.object_id if p.candidate_ref else tuple(r.object_id for r in p.node_refs),
+                p.resolution_ref.object_id if p.resolution_ref else None) for _,p,_,_,_ in rows]
+            identities=[(p.event_ref.object_id,p.security_ref.object_id,p.object_id) for _,p,_,_,_ in rows]
+            if len(set(row_scopes))!=len(row_scopes) or len(set(identities))!=len(identities):
+                raise ValueError('RANK_AMBIGUOUS_SCOPE')
             represented={r[0].object_id for r in rows}
             for d in snapshot.decisions:
                 if d.security_ref.object_id not in represented: rows.append((d.security_ref,None,None,d,[]))
@@ -166,8 +174,6 @@ class RankingEngine:
                 token=digest([*sid,h.object_id if h else None])[:24]
                 suffix=':C:'+token
                 hard=[*global_hard,*hreason]; reject=[]; soft=[]; unknown=[]
-                if sid in seen: reject.append('DUPLICATE_SCOPE')
-                seen.add(sid)
                 if not decision or decision.decision!='INCLUDED' or decision.security_ref!=sr or company is None:
                     reject.append('INVALID_IDENTITY')
                 if decision and company and decision.company_ref!=vr(company): reject.append('INVALID_IDENTITY')
@@ -249,11 +255,11 @@ class RankingEngine:
                         and cause.cause_status=='MULTI_CAUSE'):
                         dim=dim.model_copy(update={'systemic_basis':'BROAD_SECTOR_RELATIVE_NEUTRAL'})
                 else: hard.append('PRICING_HOLD')
-                if p and packet:
-                    # Only verified revenue-share facts already in the fixed research packet.
-                    ms=[take(r,ExposureMetric) for r in packet.metric_refs]
-                    ms=[m for m in ms if m.exposure_ref==p.exposure_ref and m.metric_type=='REVENUE_SHARE'
-                        and m.validation_status=='VERIFIED' and m.result_status=='DEFINED']
+                if p and p.world=='ECONOMIC':
+                    # Ranking purity uses current qualified Phase5 measurements, fixed in this output.
+                    ms=self.purity_metrics(v,p.exposure_ref)
+                    for m in ms: take(vr(m),ExposureMetric)
+                    metrics=[vr(m) for m in ms]
                     if len(ms)==1:
                         metrics=[vr(ms[0])]
                         dim=dim.model_copy(update={'purity':'HIGH' if ms[0].value>=rules.high_revenue_share else 'LOW'})
@@ -331,7 +337,7 @@ class RankingEngine:
             for r in candidates:
                 d=candidate_data[r]; sid=tuple(vectors[r]['tie_break']); prev=prev_by_scope.pop(sid,None)
                 before=prev.candidate_grade if prev else None; after=d['candidate_grade']
-                change='NEW' if prev is None else 'UNCHANGED' if before==after else 'REJECTED' if after=='REJECT' else 'OVERPRICED' if after=='OVERPRICED' else 'UPGRADED' if RankRules.model_fields['grade_order'].default.index(after)<RankRules.model_fields['grade_order'].default.index(before) else 'DOWNGRADED'
+                change=grade_change(before,after)
                 changed=[n for n in RankDimensions.model_fields if prev and getattr(prev,n)!=d[n]]
                 pr=prev_ranks.get(vr(prev)) if prev else None; cr=current_ranks.get(r)
                 changes.append(stage(CandidateChange,':CHANGE:'+digest(ref(r))[:20],dict(previous_candidate_ref=ref(prev) if prev else None,current_candidate_ref=ref(r),
@@ -353,6 +359,15 @@ class RankingEngine:
         self.ledger._write('P9:BUILD:'+identity+':'+str(version),digest(request.model_dump(mode='json')),write)
         return self.ledger.get(identity,version)
 
+    def purity_metrics(self,v,exposure_ref):
+        # Latest publication per accounting scope, including invalidating revisions.
+        groups={}
+        for o in v.values():
+            if isinstance(o,ExposureMetric) and o.exposure_ref==exposure_ref and o.metric_type=='REVENUE_SHARE':
+                k=metric_scope(o)
+                groups[k]=newest([o,*([groups[k]] if k in groups else [])])
+        return [m for m in groups.values() if m.validation_status=='VERIFIED' and m.result_status=='DEFINED']
+
     def current(self,package_ref,*,as_of,ranking_mode):
         at=TypeAdapter(UTCDateTime).validate_python(as_of); v=self.view(at)
         package=self.load(v,package_ref,OpportunityPackage)
@@ -363,6 +378,11 @@ class RankingEngine:
             reasons.extend(self._history_reasons(self.load(v,hr,MappingHistory),v))
         for cr in package.candidate_refs:
             c=self.load(v,cr,CandidateVersion)
+            if c.world=='ECONOMIC' and c.path_ref:
+                path=self.load(v,c.path_ref,TransmissionPath)
+                if any(isinstance(o,ExposureMetric) and o.exposure_ref==path.exposure_ref
+                    and o.metric_type=='REVENUE_SHARE' and o.available_at>package.as_of for o in v.values()):
+                    reasons.append('METRIC_RECOMPUTE_REQUIRED')
             for mr in c.metric_refs:
                 metric=v[key(mr)]
                 if any(isinstance(o,ExposureMetric) and metric_scope(o)==metric_scope(metric)

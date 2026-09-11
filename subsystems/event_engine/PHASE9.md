@@ -42,7 +42,7 @@ Company 与 Security 继续分离；核对固定 Universe 决策、公司/证券
 | --- | --- |
 | ALPHA1 | 上述 Gate + VERIFIED_DIRECT 暴露、HIGH/VERY_HIGH thesis、POSITIVE/STRONG edge、SUPPORTED 下一买方、LOW/MEDIUM Price-in/Crowding/Reversal、CURRENT_EVENT_DOMINANT、HIGH 已披露收入纯度、反方 UNCHANGED/合法ALT_STRONGER、无软缺口 |
 | ALPHA2 | 上述 Gate + MEDIUM/HIGH/VERY_HIGH thesis、POSITIVE/STRONG 或有条件 THIN、SUPPORTED/PLAUSIBLE 下一买方、风险不超过HIGH、非强替代原因。软缺口/纯度未知/反方削弱将ALPHA1上限降到ALPHA2 |
-| BETA | 明确完整分母的广泛行业扩散、相对行业反应接近中性、MULTI_CAUSE、LOW 公司收入纯度、有效研究与反方/失效条件、非NONE/NEGATIVE/HOLD edge、反转非EXTREME。不是未知项垃圾桶；edge UNKNOWN 在此允许，但不构成正式正向空间 |
+| BETA | 明确完整分母的广泛行业扩散、相对行业反应接近中性、MULTI_CAUSE、LOW 公司收入纯度、有效研究与反方/失效条件、STRONG/POSITIVE/THIN edge、已知thesis/Price-in/Crowding/Reversal、反转非EXTREME。核心UNKNOWN/HOLD不得VALID BETA；公司级Next Buyer为显式可选项 |
 | WATCH | 等待新证据/买方/定价/非核心维度，或核心未知阻止Alpha；不为了非空榜升级 |
 | OVERPRICED | 有效经济研究与反方后，高/很高Price-in且NONE/NEGATIVE edge；不等于看空、SELL或做空 |
 | REJECT | 无效身份/路径、非本机制正向受益、Phase7 NULL、反方致命否定等；保留审计样本 |
@@ -68,7 +68,7 @@ NARRATIVE 单独进入观察榜，只能 WATCH，保留 pricing_status=HOLD 与�
 
 ordinal 仅代表有序类别的位置，完全不是胜率或收益率。UNKNOWN/HOLD/CAUSE_UNKNOWN 的 ordinal=null，单列 knowledge bucket；展示排序放在该维已知类别后，不伪装成数值0或测量最差值。Remaining Edge、thesis、buyer、Price-in/crowding/reversal 为 BLOCKING_UNKNOWN；alternative cause、纯度、非核心缺失为 SOFT_UNKNOWN。非核心缺失可降ALPHA2或WATCH，不机械全部REJECT。
 
-收入纯度仅用固定Packet中唯一、VERIFIED/DEFINED、同Exposure的 REVENUE_SHARE；>=0.5为HIGH，其余LOW。多口径/缺值UNKNOWN；不使用利润/产能比例替代。0.5、行业广度0.6、相对行业中性容忍0.005是明确未校准工程阈值，保留于 RankPolicy，不叫最优参数，不看未来收益调整。后续校准必须新版本且经独立验收。
+收入纯度使用截至请求as_of、同固定Exposure的当前合法Phase5 REVENUE_SHARE；按期间/范围/单位/币种选最新版本，只有唯一VERIFIED/DEFINED口径才确定纯度，所有选中指标固定写入metric_refs及input_version_refs。该测量不修改Phase7事实或研究结论；>=0.5为HIGH，其余LOW。多口径/缺值UNKNOWN；不使用利润/产能比例替代。0.5、行业广度0.6、相对行业中性容忍0.005是明确未校准工程阈值，保留于 RankPolicy，不叫最优参数，不看未来收益调整。后续校准必须新版本且经独立验收。
 
 当日绝对涨幅不在 RankVector。经济榜和叙事榜各自从1开始排名；全样本保留所有落榜行。空正式机会榜（ALPHA1/2/BETA都0）合法；WATCH不是为凑TOP10准备的升级池。
 
@@ -102,3 +102,15 @@ ordinal 仅代表有序类别的位置，完全不是胜率或收益率。UNKNOW
 全部保留：HOLD_MODEL_PROVIDER_LIVE、HOLD_MODEL_USAGE_COST_UNVERIFIED、HOLD_MARKET_DATA_PROVIDER_LIVE、HOLD_PRICING_POLICY_CALIBRATION、新增HOLD_RANK_POLICY_CALIBRATION、HOLD_HISTORICAL_UNIVERSE_COVERAGE、HOLD_REAL_COMPANY_EXPOSURE_COVERAGE、HOLD_PRE_1992_CALENDAR、HOLD_LICENSE_TEXT_FOR_REDISTRIBUTION；另有逐输入条件HOLD。
 
 API_BUDGET=0；无真实行情/LLM/Broker API、无Bridge、无Outcome/Settlement/T+1/MFE/MAE/PnL/胜率/回测/交易执行、无Market Engine集成。Issue #14保持OPEN，PR保持Draft，完成后停止人工复审。
+
+## Review A1 冻结契约
+
+V0.1 grade_order 必须精确等于 GRADE_ORDER：ALPHA1、ALPHA2、BETA、WATCH、OVERPRICED、REJECT；禁止重排。排序和CandidateChange共用同一来源；未来变更需新策略版本及独立Review。
+
+BETA_UNKNOWN_POLICY=CORE_KNOWN_COMPANY_BUYER_OPTIONAL：Remaining Edge、Thesis、Price-in、Crowding、Reversal均不可UNKNOWN/HOLD。公司级Next Buyer对BETA显式可选；RankVector保留其原始UNKNOWN知识状态，BETA资格使用独立例外，不能顺带豁免其余核心维度。核心未知退为WATCH，不计入eligible_for_ranking BETA。
+
+PURITY_METRIC_SCOPE由不可变path_ref解析为(exposure_ref含固定版本,REVENUE_SHARE)。不依赖旧metric_refs是否为空。current检查该scope在package输入as_of后出现的所有指标发布，包括首次出现、版本更正、冲突口径和多口径变化；保守地包括撤销/失效修订。触发METRIC_RECOMPUTE_REQUIRED + RANK_RECOMPUTE_REQUIRED / HOLD。重建从当时可知范围选择每个会计口径的最新发布，再校验VERIFIED/DEFINED；多合法口径仍UNKNOWN。历史as_of不回填。
+
+同一MappingHistory object_id的多个version同时输入，整体拒绝RANK_HISTORY_VERSION_AMBIGUITY。不同History ID若覆盖同事件/证券/Exposure/world/candidate/resolution机制scope，整体拒绝RANK_AMBIGUOUS_SCOPE，不使用遍历顺序挑选赢家；不同合法事件或机制继续允许。
+
+Phase9原BETA fixture补充虚构连续交易与同窗口量额输入，由原Phase8计算已知THIN Edge及风险；不手填派生Pricing，不修改原760项测试。所有原HOLD和API_BUDGET=0继续保留。

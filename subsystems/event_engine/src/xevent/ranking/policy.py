@@ -1,5 +1,5 @@
 """Transparent ordered rules. No market-return score, training or account inputs."""
-from .contracts import RankDimensions, RankRules, OrdinalDimension
+from .contracts import RankDimensions, RankRules, OrdinalDimension, BETA_CORE, GRADE_ORDER
 
 
 def unknown_dimensions(d, rules):
@@ -22,6 +22,10 @@ def classify(dimensions, rules, *, hard=(), reject=(), countercase=(), failures=
     if d.pricing_status!='ENGINEERING_ONLY': return 'WATCH','HOLD',('PRICING_HOLD',)
     if d.price_in_band in rules.high_price_bands and d.remaining_edge in rules.no_edge_bands:
         return 'OVERPRICED','OVERPRICED',('HIGH_PRICING_NO_REMAINING_EDGE_NOT_SHORT',)
+    # Explicit BETA exception: company-specific Next Buyer is optional; core pricing is not.
+    if d.systemic_basis=='BROAD_SECTOR_RELATIVE_NEUTRAL':
+        missing=[n for n in BETA_CORE if getattr(d,n) in ('UNKNOWN','HOLD')]
+        if missing: return 'WATCH','WATCH',tuple('BLOCKING_UNKNOWN:'+n for n in missing)
     # Beta requires explicit broad sector transmission, not just failed Alpha eligibility.
     if (d.systemic_basis=='BROAD_SECTOR_RELATIVE_NEUTRAL' and d.purity=='LOW'
         and d.thesis_strength in rules.alpha2_thesis and d.remaining_edge not in ('NONE','NEGATIVE','HOLD')
@@ -64,3 +68,11 @@ def sort_key(vector, rules):
     # Unknown is its own knowledge bucket, never a substituted numeric measurement.
     dimensions=tuple((0,x.ordinal) if x.ordinal is not None else (1,0) for x in vector.dimensions)
     return state,rules.grade_order.index(vector.candidate_grade),dimensions,tuple(vector.tie_break)
+
+
+def grade_change(before, after):
+    if before is None: return 'NEW'
+    if before==after: return 'UNCHANGED'
+    if after=='REJECT': return 'REJECTED'
+    if after=='OVERPRICED': return 'OVERPRICED'
+    return 'UPGRADED' if GRADE_ORDER.index(after)<GRADE_ORDER.index(before) else 'DOWNGRADED'
