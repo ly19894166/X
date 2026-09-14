@@ -27,6 +27,10 @@ class ChineseParser(argparse.ArgumentParser):
 
 
 def main(argv=None):
+    supplied = list(sys.argv[1:] if argv is None else argv)
+    if supplied and supplied[0] == 'shadow':
+        from .evaluation.cli import main as shadow_main
+        return shadow_main(supplied[1:])
     parser = ChineseParser(description="X 事件引擎：离线契约、SQLite底座与Phase 3虚构事件状态")
     sub = parser.add_subparsers(dest="command", required=True, title="命令")
     ingest = sub.add_parser("ingest", help="校验离线 fixture；不写入数据库")

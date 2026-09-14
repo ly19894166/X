@@ -1,4 +1,4 @@
-name: Event Engine Phase 9
+name: Event Engine Phase 10
 
 on:
   pull_request:
@@ -36,7 +36,7 @@ jobs:
         run: python -m pip install --no-build-isolation --no-deps -e .
       - name: 依赖一致性
         run: python -m pip check
-      - name: Phase 1–9 full tests
+      - name: Phase 1–10 full tests
         run: python -m pytest -q
       - name: PIT tests 单独报告
         run: python -m pytest -q -m pit
@@ -60,3 +60,5 @@ jobs:
         run: python -m xevent.pricing.fixture --db phase8-ci.sqlite
       - name: Phase 9 独立分榜与全样本中文离线fixture
         run: python -m xevent.ranking.fixture --db phase9-ci.sqlite
+      - name: Phase 10 Shadow结算与全样本中文离线fixture
+        run: python -m xevent.evaluation.fixture --db phase10-labels-ci.sqlite --features-db phase10-features-ci.sqlite
