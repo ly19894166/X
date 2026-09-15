@@ -1,0 +1,50 @@
+[
+  {
+    "source_name": "Bluesky public AppView",
+    "platform": "BLUESKY",
+    "endpoint": "https://public.api.bsky.app/xrpc/app.bsky.feed.searchPosts?q=technology&limit=1",
+    "official_api_doc": "https://docs.bsky.app/docs/advanced-guides/api-directory",
+    "access_method": "ANONYMOUS_HTTP_GET",
+    "authentication_required": false,
+    "rate_limit_status": "UNKNOWN; respect HTTP 429 and Retry-After",
+    "raw_retention_status": "UNKNOWN",
+    "redistribution_status": "UNKNOWN; no redistribution authorized",
+    "deletion_semantics": "Absence is unknown; no deletion stream in V0.1.",
+    "edit_semantics": "Same URI changed content appends a version.",
+    "reviewed_at": "2026-09-15T09:51:24.587292+00:00",
+    "qualification_status": "HOLD_SOURCE_AUTHORIZATION",
+    "authorization_proof": "API directory retrieved; https://bsky.social/about/support/tos returned HTTP 403. Raw retention authorization unconfirmed."
+  },
+  {
+    "source_name": "Hacker News official Firebase",
+    "platform": "HN",
+    "endpoint": "https://hacker-news.firebaseio.com/v0/newstories.json",
+    "official_api_doc": "https://github.com/HackerNews/API",
+    "access_method": "ANONYMOUS_HTTP_GET",
+    "authentication_required": false,
+    "rate_limit_status": "No rate limit stated in official API README; still one request per manual call",
+    "raw_retention_status": "UNKNOWN",
+    "redistribution_status": "UNKNOWN; no redistribution authorized",
+    "deletion_semantics": "item.deleted=true explicit; null is missing unknown.",
+    "edit_semantics": "updates supplies changed IDs; refetch selected story only.",
+    "reviewed_at": "2026-09-15T09:51:24.587292+00:00",
+    "qualification_status": "HOLD_SOURCE_AUTHORIZATION",
+    "authorization_proof": "Official README retrieved from raw.githubusercontent.com/HackerNews/API/master/README.md: public data, currently no rate limit. Raw retention permission not confirmed by this review."
+  },
+  {
+    "source_name": "mastodon.social only",
+    "platform": "MASTODON",
+    "endpoint": "https://mastodon.social/api/v1/timelines/public?local=true&limit=1",
+    "official_api_doc": "https://docs.joinmastodon.org/methods/timelines/",
+    "access_method": "ANONYMOUS_HTTP_GET",
+    "authentication_required": null,
+    "rate_limit_status": "UNKNOWN; respect HTTP 429 and Retry-After",
+    "raw_retention_status": "UNKNOWN",
+    "redistribution_status": "UNKNOWN; no redistribution authorized",
+    "deletion_semantics": "Absent timeline item is not deletion.",
+    "edit_semantics": "Changed status body appends a version.",
+    "reviewed_at": "2026-09-15T09:51:24.587292+00:00",
+    "qualification_status": "HOLD_SOURCE_AUTHORIZATION",
+    "authorization_proof": "https://mastodon.social/terms retrieved: embedded configuration local_live_feed_access=disabled and remote_live_feed_access=disabled. Timeline anonymous qualification and retention unresolved. No content request attempted."
+  }
+]
