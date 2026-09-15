@@ -1,10 +1,12 @@
-name: Event Engine Phase 10
+name: Event Engine + L1 Offline Pilot
 
 on:
   pull_request:
     paths:
       - 'subsystems/event_engine/**'
       - '.github/workflows/event-engine-ci.yml'
+      - 'docs/real_landing/**'
+      - 'scripts/real_landing/**'
 permissions:
   contents: read
 
@@ -36,7 +38,9 @@ jobs:
         run: python -m pip install --no-build-isolation --no-deps -e .
       - name: 依赖一致性
         run: python -m pip check
-      - name: Phase 1–10 full tests
+      - name: L1 OFFLINE_CI focused and Phase 2 reuse
+        run: python -m pytest -q tests/test_real_landing_l1.py tests/test_phase2_adapters.py tests/test_phase2_ledger.py
+      - name: Phase 1–10 plus L1 full tests
         run: python -m pytest -q
       - name: PIT tests 单独报告
         run: python -m pytest -q -m pit

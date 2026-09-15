@@ -1,0 +1,14 @@
+# Real landing data and local environments must never be committed
+/runtime/
+**/runtime/
+**/.venv/
+**/__pycache__/
+**/.pytest_cache/
+*.sqlite
+*.sqlite-*
+*.db
+*.db-*
+.env
+.env.*
+*.pem
+*.key
